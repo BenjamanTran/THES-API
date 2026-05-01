@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Skill
   CODES = %w[smash clear drop drive net_shot lift push block kill].freeze
 
@@ -16,7 +18,7 @@ class Skill
   end
 
   def self.find(code)
-    raise ArgumentError, "Unknown skill: #{code}" unless CODES.include?(code)
+    raise ArgumentError, "Unknown skill: #{code}" if CODES.exclude?(code)
 
     new(code)
   end

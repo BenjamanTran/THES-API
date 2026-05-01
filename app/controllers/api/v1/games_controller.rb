@@ -1,7 +1,13 @@
+# frozen_string_literal: true
+
 module Api
   module V1
     class GamesController < BaseController
       before_action :set_game, only: %i[show join leave]
+
+      def show
+        render json: game_response(@game)
+      end
 
       def create
         result = service.create
@@ -9,19 +15,15 @@ module Api
         if result.success?
           render json: game_response(result.data[:game]), status: :created
         else
-          render json: { errors: result.error }, status: :unprocessable_entity
+          render json: { errors: result.error }, status: :unprocessable_content
         end
-      end
-
-      def show
-        render json: game_response(@game)
       end
 
       def join
         result = service(game: @game).join
 
         if result.success?
-          response = { status: "joined" }
+          response = { status: 'joined' }
           response[:warning] = result.data[:warning] if result.data[:warning]
           render json: response, status: :ok
         else
@@ -33,7 +35,7 @@ module Api
         result = service(game: @game).leave
 
         if result.success?
-          render json: { status: "left" }, status: :ok
+          render json: { status: 'left' }, status: :ok
         else
           render json: { error: result.error }, status: result.status
         end
@@ -44,7 +46,7 @@ module Api
       def set_game
         @game = Game.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: "Game not found" }, status: :not_found
+        render json: { error: 'Game not found' }, status: :not_found
       end
 
       def service(game: nil)
@@ -56,21 +58,11 @@ module Api
       end
 
       def game_response(game)
-        {
-          id: game.id,
-          start_time: game.start_time,
-          end_time: game.end_time,
-          status: game.status,
-          match_type: game.match_type,
-          lat: game.lat,
-          lng: game.lng,
-          min_tier: game.min_tier,
-          max_tier: game.max_tier,
-          max_players: game.max_players,
-          players_count: game.players_count,
-          host_id: game.host_id,
-          location: game.location
-        }
+        game.slice(
+          :id, :start_time, :end_time, :status, :match_type,
+          :lat, :lng, :min_tier, :max_tier, :max_players,
+          :players_count, :host_id, :location
+        )
       end
     end
   end

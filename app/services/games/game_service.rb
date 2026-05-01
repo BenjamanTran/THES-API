@@ -1,6 +1,9 @@
+# frozen_string_literal: true
+
 module Games
   class GameService < ApplicationService
     def initialize(user:, game: nil, params: nil)
+      super()
       @user = user
       @game = game
       @params = params
@@ -23,48 +26,57 @@ module Games
     end
 
     def join
-      return failure("Game is not open for joining") unless @game.open?
-      return failure("You have already joined this game") if already_joined?
-      return failure("You have a time conflict with another game", :conflict) if time_conflict?
+      return failure('Game is not open for joining') unless @game.open?
+      return failure('You have already joined this game') if already_joined?
+      return failure('You have a time conflict with another game', :conflict) if time_conflict?
 
-      warning = "This match may not fit your level" if tier_mismatch?
-      team = assign_team
-
-      ActiveRecord::Base.transaction do
-        @game.lock!
-        return failure("Game is already full") if @game.players_count >= @game.max_players
-
-        @game.game_participations.create!(user: @user, team: team)
-        @game.increment!(:players_count)
-        @game.update!(status: :full) if @game.players_count >= @game.max_players
-      end
-
-      success(warning: warning)
+      warning = 'This match may not fit your level' if tier_mismatch?
+      add_player(warning)
     rescue ActiveRecord::RecordInvalid => e
       failure(e.record.errors.full_messages)
     end
 
     def leave
       participation = @game.game_participations.find_by(user: @user)
-      return failure("You are not in this game") unless participation
-      return failure("Cannot leave an ongoing game") if @game.ongoing?
+      return failure('You are not in this game') unless participation
+      return failure('Cannot leave an ongoing game') if @game.ongoing?
 
-      ActiveRecord::Base.transaction do
-        if @user.id == @game.host_id
-          @game.update!(status: :cancelled)
-          @game.game_participations.destroy_all
-          @game.update!(players_count: 0)
-        else
-          participation.destroy!
-          @game.decrement!(:players_count)
-          @game.update!(status: :open) if @game.full?
-        end
-      end
-
+      @user.id == @game.host_id ? cancel_game : remove_player(participation)
       success
     end
 
     private
+
+    def add_player(warning)
+      team = assign_team
+
+      ActiveRecord::Base.transaction do
+        @game.lock!
+        return failure('Game is already full') if @game.players_count >= @game.max_players
+
+        @game.game_participations.create!(user: @user, team: team)
+        @game.update!(players_count: @game.players_count + 1)
+        @game.update!(status: :full) if @game.players_count >= @game.max_players
+      end
+
+      success(warning: warning)
+    end
+
+    def cancel_game
+      ActiveRecord::Base.transaction do
+        @game.update!(status: :cancelled)
+        @game.game_participations.destroy_all
+        @game.update!(players_count: 0)
+      end
+    end
+
+    def remove_player(participation)
+      ActiveRecord::Base.transaction do
+        participation.destroy!
+        @game.update!(players_count: @game.players_count - 1)
+        @game.update!(status: :open) if @game.full?
+      end
+    end
 
     def already_joined?
       @game.game_participations.exists?(user: @user)
@@ -74,8 +86,7 @@ module Games
       @user.games
            .where.not(id: @game.id)
            .where.not(status: :cancelled)
-           .where("start_time < ? AND end_time > ?", @game.end_time, @game.start_time)
-           .exists?
+           .exists?(['start_time < ? AND end_time > ?', @game.end_time, @game.start_time])
     end
 
     def tier_mismatch?
