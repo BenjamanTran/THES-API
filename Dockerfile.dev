@@ -17,7 +17,8 @@ RUN apt-get update -qq && \
   && rm -rf /var/lib/apt/lists/*
 
 COPY Gemfile Gemfile.lock ./
-RUN bundle install
+RUN --mount=type=cache,target=/usr/local/bundle/cache \
+    bundle install
 
 COPY . .
 

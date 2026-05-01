@@ -33,7 +33,7 @@ gem "thruster", require: false
 gem "image_processing", "~> 1.2"
 
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
-# gem "rack-cors"
+gem "rack-cors"
 
 # Swagger API documentation
 gem "rswag-api"
@@ -43,7 +43,15 @@ gem "rswag-ui"
 gem "elasticsearch-model", "~> 8.0.1"
 gem "elasticsearch-rails", "~> 8.0.1"
 
+group :development do
+  gem "bullet"
+  gem "rack-mini-profiler"
+end
+
 group :development, :test do
+  # RSpec testing framework
+  gem "rspec-rails"
+
   # Swagger spec generation
   gem "rswag-specs"
 
