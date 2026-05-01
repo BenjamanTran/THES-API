@@ -29,7 +29,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_01_040001) do
     t.datetime "created_at", null: false
     t.string "location"
     t.integer "match_type", default: 0, null: false
-    t.integer "max_tier", default: 5, null: false
+    t.integer "max_tier", default: 0, null: false
     t.integer "min_tier", default: 0, null: false
     t.datetime "played_at"
     t.integer "status", default: 0, null: false
