@@ -11,6 +11,6 @@ class CreateGameParticipations < ActiveRecord::Migration[8.0]
       t.timestamps
     end
 
-    add_index :game_participations, [:user_id, :game_id], unique: true
+    add_index :game_participations, [ :user_id, :game_id ], unique: true
   end
 end

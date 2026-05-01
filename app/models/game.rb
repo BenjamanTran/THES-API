@@ -14,7 +14,7 @@ class Game < ApplicationRecord
   validates :match_type, presence: true
   validates :start_time, presence: true
   validates :end_time, presence: true
-  validates :max_players, presence: true, inclusion: { in: [2, 4] }
+  validates :max_players, presence: true, inclusion: { in: [ 2, 4 ] }
   validate :tier_range_valid
   validate :time_range_valid
   validate :max_players_matches_match_type
