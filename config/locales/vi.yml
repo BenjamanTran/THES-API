@@ -1,0 +1,18 @@
+vi:
+  skills:
+    smash: "Đập"
+    clear: "Phông"
+    drop: "Cắt"
+    drive: "Đẩy cầu"
+    net_shot: "Bỏ nhỏ"
+    lift: "Bung cầu"
+    push: "Đẩy nhẹ"
+    block: "Chặn cầu"
+    kill: "Chụp lưới"
+  ranks:
+    bronze: "Đồng"
+    silver: "Bạc"
+    gold: "Vàng"
+    platinum: "Bạch Kim"
+    diamond: "Kim Cương"
+    master: "Cao Thủ"
