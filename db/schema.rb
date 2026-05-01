@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_01_040003) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_01_040004) do
   create_table "game_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "game_id", null: false
@@ -41,6 +41,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_01_040003) do
     t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
     t.index ["host_id"], name: "index_games_on_host_id"
+    t.index ["min_tier", "max_tier"], name: "index_games_on_min_tier_and_max_tier"
+    t.index ["start_time"], name: "index_games_on_start_time"
+    t.index ["status"], name: "index_games_on_status"
   end
 
   create_table "ranks", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
