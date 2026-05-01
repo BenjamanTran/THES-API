@@ -1,0 +1,312 @@
+---
+openapi: 3.0.1
+info:
+  title: API V1
+  version: v1
+paths:
+  "/api/v1/games":
+    post:
+      summary: Create a game
+      tags:
+      - Games
+      parameters:
+      - name: X-User-Id
+        in: header
+        required: true
+        description: Current user ID
+        schema:
+          type: integer
+      responses:
+        '201':
+          description: game created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  start_time:
+                    type: string
+                    format: date-time
+                  end_time:
+                    type: string
+                    format: date-time
+                  status:
+                    type: string
+                    enum:
+                    - open
+                    - full
+                    - ongoing
+                    - finished
+                    - cancelled
+                  match_type:
+                    type: string
+                    enum:
+                    - singles
+                    - doubles
+                  lat:
+                    type: string
+                    nullable: true
+                  lng:
+                    type: string
+                    nullable: true
+                  min_tier:
+                    type: string
+                  max_tier:
+                    type: string
+                  max_players:
+                    type: integer
+                  players_count:
+                    type: integer
+                  host_id:
+                    type: integer
+                  location:
+                    type: string
+                    nullable: true
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: string
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                start_time:
+                  type: string
+                  format: date-time
+                  example: '2026-05-10T19:00:00Z'
+                end_time:
+                  type: string
+                  format: date-time
+                  example: '2026-05-10T20:00:00Z'
+                lat:
+                  type: number
+                  format: float
+                  example: 10.123
+                lng:
+                  type: number
+                  format: float
+                  example: 106.123
+                match_type:
+                  type: string
+                  enum:
+                  - singles
+                  - doubles
+                  example: doubles
+                min_tier:
+                  type: string
+                  enum:
+                  - bronze
+                  - silver
+                  - gold
+                  - platinum
+                  - diamond
+                  - master
+                  example: bronze
+                max_tier:
+                  type: string
+                  enum:
+                  - bronze
+                  - silver
+                  - gold
+                  - platinum
+                  - diamond
+                  - master
+                  example: gold
+                max_players:
+                  type: integer
+                  enum:
+                  - 2
+                  - 4
+                  example: 4
+              required:
+              - start_time
+              - end_time
+              - match_type
+              - max_players
+  "/api/v1/games/{id}":
+    get:
+      summary: Get a game
+      tags:
+      - Games
+      parameters:
+      - name: X-User-Id
+        in: header
+        required: true
+        description: Current user ID
+        schema:
+          type: integer
+      - name: id
+        in: path
+        required: true
+        description: Game ID
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: game found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  start_time:
+                    type: string
+                    format: date-time
+                  end_time:
+                    type: string
+                    format: date-time
+                  status:
+                    type: string
+                    enum:
+                    - open
+                    - full
+                    - ongoing
+                    - finished
+                    - cancelled
+                  match_type:
+                    type: string
+                    enum:
+                    - singles
+                    - doubles
+                  lat:
+                    type: string
+                    nullable: true
+                  lng:
+                    type: string
+                    nullable: true
+                  min_tier:
+                    type: string
+                  max_tier:
+                    type: string
+                  max_players:
+                    type: integer
+                  players_count:
+                    type: integer
+                  host_id:
+                    type: integer
+                  location:
+                    type: string
+                    nullable: true
+        '404':
+          description: game not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  "/api/v1/games/{id}/join":
+    post:
+      summary: Join a game
+      tags:
+      - Games
+      parameters:
+      - name: X-User-Id
+        in: header
+        required: true
+        description: Current user ID
+        schema:
+          type: integer
+      - name: id
+        in: path
+        required: true
+        description: Game ID
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: joined successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: joined
+                  warning:
+                    type: string
+                    nullable: true
+                    example: This match may not fit your level
+        '422':
+          description: cannot join — game not open or already joined
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '409':
+          description: time conflict with another game
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  "/api/v1/games/{id}/leave":
+    post:
+      summary: Leave a game
+      tags:
+      - Games
+      parameters:
+      - name: X-User-Id
+        in: header
+        required: true
+        description: Current user ID
+        schema:
+          type: integer
+      - name: id
+        in: path
+        required: true
+        description: Game ID
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: left successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: left
+        '422':
+          description: not in this game
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+servers:
+- url: http://localhost:3000
+  description: Local development

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class User < ApplicationRecord
   has_many :game_participations, dependent: :destroy
   has_many :games, through: :game_participations

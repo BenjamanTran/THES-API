@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Rank < ApplicationRecord
   belongs_to :user
 
@@ -36,6 +38,6 @@ class Rank < ApplicationRecord
   private
 
   def roman(number)
-    { 1 => "I", 2 => "II", 3 => "III" }[number]
+    { 1 => 'I', 2 => 'II', 3 => 'III' }[number]
   end
 end

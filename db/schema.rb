@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_01_040001) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_01_040003) do
   create_table "game_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "game_id", null: false
@@ -27,13 +27,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_01_040001) do
 
   create_table "games", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.datetime "end_time"
+    t.bigint "host_id"
+    t.decimal "lat", precision: 10, scale: 7
+    t.decimal "lng", precision: 10, scale: 7
     t.string "location"
     t.integer "match_type", default: 0, null: false
-    t.integer "max_tier", default: 0, null: false
+    t.integer "max_players", default: 2, null: false
+    t.integer "max_tier", default: 5, null: false
     t.integer "min_tier", default: 0, null: false
-    t.datetime "played_at"
+    t.integer "players_count", default: 0, null: false
+    t.datetime "start_time"
     t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.index ["host_id"], name: "index_games_on_host_id"
   end
 
   create_table "ranks", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -51,22 +58,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_01_040001) do
     t.index ["user_id"], name: "index_ranks_on_user_id", unique: true
   end
 
-  create_table "skills", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
-    t.string "code", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["code"], name: "index_skills_on_code", unique: true
-  end
-
   create_table "user_skills", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "level", default: 1, null: false
-    t.bigint "skill_id", null: false
+    t.string "skill_code", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
-    t.index ["skill_id"], name: "index_user_skills_on_skill_id"
-    t.index ["user_id", "skill_id"], name: "index_user_skills_on_user_id_and_skill_id", unique: true
+    t.index ["user_id", "skill_code"], name: "index_user_skills_on_user_id_and_skill_code", unique: true
     t.index ["user_id"], name: "index_user_skills_on_user_id"
+    t.index ["user_id"], name: "index_user_skills_on_user_id_and_skill_id", unique: true
   end
 
   create_table "users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -79,7 +79,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_01_040001) do
 
   add_foreign_key "game_participations", "games"
   add_foreign_key "game_participations", "users"
+  add_foreign_key "games", "users", column: "host_id"
   add_foreign_key "ranks", "users"
-  add_foreign_key "user_skills", "skills"
   add_foreign_key "user_skills", "users"
 end
