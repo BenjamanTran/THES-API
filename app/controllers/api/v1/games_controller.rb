@@ -10,14 +10,7 @@ module Api
       MAX_PER_PAGE = 50
 
       def index
-        games = Game.upcoming
-                    .by_status(params[:status])
-                    .by_time_from(params[:from_time])
-                    .by_time_to(params[:to_time])
-                    .by_tier(params[:tier])
-                    .order(start_time: :asc)
-                    .page(params[:page])
-                    .per([params[:per_page].to_i, MAX_PER_PAGE].min.clamp(1, MAX_PER_PAGE))
+        games = filtered_games.page(params[:page]).per(clamped_per_page)
 
         render json: { games: games.map { |g| game_list_item(g) }, meta: pagination_meta(games) }
       end
@@ -69,6 +62,19 @@ module Api
 
       def game_params
         params.permit(:start_time, :end_time, :lat, :lng, :match_type, :min_tier, :max_tier, :max_players)
+      end
+
+      def filtered_games
+        Game.upcoming
+            .by_status(params[:status])
+            .by_time_from(params[:from_time])
+            .by_time_to(params[:to_time])
+            .by_tier(params[:tier])
+            .order(start_time: :asc)
+      end
+
+      def clamped_per_page
+        [params[:per_page].to_i, MAX_PER_PAGE].min.clamp(1, MAX_PER_PAGE)
       end
 
       def pagination_meta(collection)

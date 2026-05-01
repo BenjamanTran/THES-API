@@ -15,14 +15,14 @@ module Games
 
     def transition_to_ongoing(now)
       Game.where(status: %i[open full])
-          .where('start_time <= ? AND end_time > ?', now, now)
-          .update_all(status: :ongoing, updated_at: now)
+          .where(start_time: ..now, end_time: now..)
+          .find_each { |game| game.update(status: :ongoing) }
     end
 
     def transition_to_finished(now)
       Game.where(status: %i[open full ongoing])
-          .where('end_time <= ?', now)
-          .update_all(status: :finished, updated_at: now)
+          .where(end_time: ..now)
+          .find_each { |game| game.update(status: :finished) }
     end
   end
 end

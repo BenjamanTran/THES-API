@@ -12,10 +12,10 @@ class Game < ApplicationRecord
   enum :min_tier, TIERS, prefix: true
   enum :max_tier, TIERS, prefix: true
 
-  scope :upcoming, -> { where('start_time >= ?', Time.current) }
+  scope :upcoming, -> { where(start_time: Time.current..) }
   scope :by_status, ->(status) { where(status: status) if status.present? }
-  scope :by_time_from, ->(time) { where('start_time >= ?', time) if time.present? }
-  scope :by_time_to, ->(time) { where('start_time <= ?', time) if time.present? }
+  scope :by_time_from, ->(time) { where(start_time: time..) if time.present? }
+  scope :by_time_to, ->(time) { where(start_time: ..time) if time.present? }
   scope :by_tier, lambda { |tier|
     return unless tier.present? && TIERS.key?(tier)
 
@@ -33,7 +33,7 @@ class Game < ApplicationRecord
   validate :max_players_matches_match_type
 
   def fit_level(user)
-    return nil unless user&.rank
+    return unless user&.rank
 
     user_tier = TIERS[user.rank.tier] || 0
     min_val = TIERS[min_tier] || 0
