@@ -1,12 +1,23 @@
-class Skill < ApplicationRecord
+class Skill
   CODES = %w[smash clear drop drive net_shot lift push block kill].freeze
 
-  has_many :user_skills, dependent: :destroy
-  has_many :users, through: :user_skills
+  attr_reader :code
 
-  validates :code, presence: true, uniqueness: true, inclusion: { in: CODES }
+  def initialize(code)
+    @code = code
+  end
 
   def name
     I18n.t("skills.#{code}")
+  end
+
+  def self.all
+    CODES.map { |code| new(code) }
+  end
+
+  def self.find(code)
+    raise ArgumentError, "Unknown skill: #{code}" unless CODES.include?(code)
+
+    new(code)
   end
 end
