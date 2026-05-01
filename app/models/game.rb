@@ -12,6 +12,17 @@ class Game < ApplicationRecord
   enum :min_tier, TIERS, prefix: true
   enum :max_tier, TIERS, prefix: true
 
+  scope :upcoming, -> { where('start_time >= ?', Time.current) }
+  scope :by_status, ->(status) { where(status: status) if status.present? }
+  scope :by_time_from, ->(time) { where('start_time >= ?', time) if time.present? }
+  scope :by_time_to, ->(time) { where('start_time <= ?', time) if time.present? }
+  scope :by_tier, lambda { |tier|
+    return unless tier.present? && TIERS.key?(tier)
+
+    tier_val = TIERS[tier]
+    where('min_tier <= ? AND max_tier >= ?', tier_val, tier_val)
+  }
+
   validates :status, presence: true
   validates :match_type, presence: true
   validates :start_time, presence: true
@@ -20,6 +31,22 @@ class Game < ApplicationRecord
   validate :tier_range_valid
   validate :time_range_valid
   validate :max_players_matches_match_type
+
+  def fit_level(user)
+    return nil unless user&.rank
+
+    user_tier = TIERS[user.rank.tier] || 0
+    min_val = TIERS[min_tier] || 0
+    max_val = TIERS[max_tier] || 0
+
+    if user_tier.between?(min_val, max_val)
+      'good'
+    elsif (user_tier - min_val).abs <= 1 || (user_tier - max_val).abs <= 1
+      'warning'
+    else
+      'hard'
+    end
+  end
 
   private
 

@@ -5,6 +5,124 @@ info:
   version: v1
 paths:
   "/api/v1/games":
+    get:
+      summary: List games
+      tags:
+      - Games
+      description: List upcoming games with optional filters. Auth is optional — if X-User-Id is provided, fit_level is included.
+      parameters:
+      - name: X-User-Id
+        in: header
+        required: false
+        description: Current user ID (optional, enables fit_level)
+        schema:
+          type: integer
+      - name: page
+        in: query
+        required: false
+        description: Page number (default 1)
+        schema:
+          type: integer
+          default: 1
+          example: 1
+      - name: per_page
+        in: query
+        required: false
+        description: Results per page (default 20, max 50)
+        schema:
+          type: integer
+          default: 20
+          maximum: 50
+          example: 20
+      - name: status
+        in: query
+        required: false
+        description: Filter by game status
+        schema:
+          type: string
+          enum:
+          - open
+          - full
+          - ongoing
+      - name: tier
+        in: query
+        required: false
+        description: Filter games that match this tier
+        schema:
+          type: string
+          enum:
+          - bronze
+          - silver
+          - gold
+          - platinum
+          - diamond
+          - master
+      - name: from_time
+        in: query
+        required: false
+        description: Filter games starting from this time (ISO8601, default now)
+        schema:
+          type: string
+          format: date-time
+      - name: to_time
+        in: query
+        required: false
+        description: Filter games starting before this time (ISO8601)
+        schema:
+          type: string
+          format: date-time
+      responses:
+        '200':
+          description: games listed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  games:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        start_time:
+                          type: string
+                          format: date-time
+                        end_time:
+                          type: string
+                          format: date-time
+                        status:
+                          type: string
+                          enum:
+                          - open
+                          - full
+                          - ongoing
+                          - finished
+                          - cancelled
+                        players_count:
+                          type: integer
+                        max_players:
+                          type: integer
+                        fit_level:
+                          type: string
+                          nullable: true
+                          enum:
+                          - good
+                          - warning
+                          - hard
+                          description: Only present when X-User-Id is provided
+                  meta:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      per_page:
+                        type: integer
+                      total:
+                        type: integer
+                      total_pages:
+                        type: integer
     post:
       summary: Create a game
       tags:
@@ -40,30 +158,10 @@ paths:
                     - ongoing
                     - finished
                     - cancelled
-                  match_type:
-                    type: string
-                    enum:
-                    - singles
-                    - doubles
-                  lat:
-                    type: string
-                    nullable: true
-                  lng:
-                    type: string
-                    nullable: true
-                  min_tier:
-                    type: string
-                  max_tier:
-                    type: string
-                  max_players:
-                    type: integer
                   players_count:
                     type: integer
-                  host_id:
+                  max_players:
                     type: integer
-                  location:
-                    type: string
-                    nullable: true
         '422':
           description: validation failed
           content:
@@ -145,14 +243,15 @@ paths:
               - max_players
   "/api/v1/games/{id}":
     get:
-      summary: Get a game
+      summary: Get game detail
       tags:
       - Games
+      description: Returns game detail including host and players list. Auth is optional — if X-User-Id is provided, fit_level context is available.
       parameters:
       - name: X-User-Id
         in: header
-        required: true
-        description: Current user ID
+        required: false
+        description: Current user ID (optional)
         schema:
           type: integer
       - name: id
@@ -190,25 +289,26 @@ paths:
                     enum:
                     - singles
                     - doubles
-                  lat:
-                    type: string
-                    nullable: true
-                  lng:
-                    type: string
-                    nullable: true
-                  min_tier:
-                    type: string
-                  max_tier:
-                    type: string
-                  max_players:
-                    type: integer
                   players_count:
                     type: integer
-                  host_id:
+                  max_players:
                     type: integer
-                  location:
-                    type: string
-                    nullable: true
+                  host:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                  players:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
         '404':
           description: game not found
           content:
