@@ -123,6 +123,12 @@ GEM
       activesupport (> 3)
       elasticsearch (~> 8)
       hashie
+    elasticsearch-persistence (8.0.1)
+      activemodel (> 4)
+      activesupport (> 4)
+      elasticsearch (~> 8)
+      elasticsearch-model (~> 8.0)
+      hashie
     elasticsearch-rails (8.0.1)
     erb (6.0.4)
     erubi (1.13.1)
@@ -412,6 +418,7 @@ DEPENDENCIES
   config
   debug
   elasticsearch-model (~> 8.0.1)
+  elasticsearch-persistence (~> 8.0.1)
   elasticsearch-rails (~> 8.0.1)
   image_processing (~> 1.2)
   kamal

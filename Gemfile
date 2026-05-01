@@ -50,9 +50,10 @@ gem 'kaminari'
 gem 'rswag-api'
 gem 'rswag-ui'
 
-# Elasticsearch integration with ActiveRecord
+# Elasticsearch integration
 gem 'elasticsearch-model', '~> 8.0.1'
 gem 'elasticsearch-rails', '~> 8.0.1'
+gem 'elasticsearch-persistence', '~> 8.0.1'
 
 group :development do
   gem 'bullet'
