@@ -71,12 +71,7 @@ services:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy
-    environment:
-      DB_HOST: db
-      DB_PASSWORD: password
-      REDIS_URL: redis://redis:6379/0
-      ELASTICSEARCH_URL: http://elasticsearch:9200
-      RAILS_ENV: development
+    env_file: .env
 
   sidekiq:
     build:
@@ -92,12 +87,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    environment:
-      DB_HOST: db
-      DB_PASSWORD: password
-      REDIS_URL: redis://redis:6379/0
-      ELASTICSEARCH_URL: http://elasticsearch:9200
-      RAILS_ENV: development
+    env_file: .env
 
 volumes:
   mysql_data:

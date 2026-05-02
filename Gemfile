@@ -25,6 +25,9 @@ gem 'solid_cable'
 gem 'sidekiq'
 gem 'sidekiq-cron'
 
+# Environment variables from .env files
+gem 'dotenv-rails'
+
 # App settings (config/settings.yml)
 gem 'config'
 

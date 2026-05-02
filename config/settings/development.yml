@@ -1,4 +1,1 @@
-redis:
-  host: redis
-  port: 6379
-  db: 0
+# All config comes from ENV (.env file via dotenv-rails)
