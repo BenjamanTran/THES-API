@@ -1,77 +1,122 @@
-# Seeds
+# frozen_string_literal: true
 
-puts "Creating users..."
+puts 'Seeding...'
 
-user1 = User.find_or_create_by!(email: "host@example.com") do |u|
-  u.name = "Host User"
+# ── 1. Users (100) ──────────────────────────────────────────────
+now = Time.current
+
+user_rows = 100.times.map do |i|
+  { name: "Player #{i + 1}", email: "player#{i + 1}@example.com", created_at: now, updated_at: now }
+end
+User.insert_all(user_rows)
+
+user_ids = User.pluck(:id)
+puts "Created #{user_ids.size} users."
+
+# ── 2. Ranks ────────────────────────────────────────────────────
+TIERS = Rank.tiers.keys
+RATING_RANGES = {
+  'bronze' => 0..799,
+  'silver' => 800..1199,
+  'gold' => 1200..1599,
+  'platinum' => 1600..1999,
+  'diamond' => 2000..2499
+}.freeze
+
+existing_rank_user_ids = Rank.pluck(:user_id)
+rank_rows = (user_ids - existing_rank_user_ids).map do |uid|
+  tier = TIERS.sample
+  range = RATING_RANGES[tier] || (0..799)
+  { user_id: uid, tier: Rank.tiers[tier], rating: rand(range), division: rand(1..3),
+    wins: 0, losses: 0, matches_count: 0, created_at: now, updated_at: now }
+end
+Rank.insert_all(rank_rows) if rank_rows.any?
+puts "Created #{rank_rows.size} ranks."
+
+# ── 3. Games (1000) ─────────────────────────────────────────────
+CLUSTERS = [
+  { name: 'District 1', lat: 10.7626, lng: 106.6601 },
+  { name: 'District 2', lat: 10.7769, lng: 106.7009 },
+  { name: 'District 7', lat: 10.7300, lng: 106.6500 }
+].freeze
+
+DESCRIPTIONS = [
+  'Friendly match, need 1 more player',
+  'Intermediate level, casual play',
+  'Looking for players around this area',
+  'Evening match, join if available',
+  'Competitive game, good stamina required',
+  'Beginners welcome, just for fun',
+  'Quick match after work, all levels',
+  'Weekend game, bring your own racket',
+  'Doubles match, need a partner',
+  'Serious game, high intensity'
+].freeze
+
+MATCH_TYPES = { 'singles' => 0, 'doubles' => 1 }.freeze
+STATUSES = { 'open' => 0, 'full' => 1 }.freeze
+
+game_rows = []
+participation_rows = []
+
+1000.times do |i|
+  cluster = CLUSTERS.sample
+  lat = (cluster[:lat] + rand(-0.02..0.02)).round(7)
+  lng = (cluster[:lng] + rand(-0.02..0.02)).round(7)
+
+  start_time = now + rand(1..72).hours + rand(0..59).minutes
+  end_time = start_time + rand(60..90).minutes
+
+  min_tier = rand(0..3)
+  max_tier = [min_tier + rand(0..2), 4].min
+
+  match_type_key = %w[singles doubles].sample
+  max_players = match_type_key == 'singles' ? 2 : 4
+  players_count = rand(1..max_players)
+
+  status = rand < 0.8 ? 0 : 1 # 80% open, 20% full
+  status = 1 if players_count == max_players
+
+  host_id = user_ids.sample
+
+  game_rows << {
+    start_time: start_time, end_time: end_time,
+    lat: lat, lng: lng,
+    match_type: MATCH_TYPES[match_type_key],
+    min_tier: min_tier, max_tier: max_tier,
+    max_players: max_players, players_count: players_count,
+    status: status, host_id: host_id,
+    description: DESCRIPTIONS.sample,
+    created_at: now, updated_at: now
+  }
 end
 
-user2 = User.find_or_create_by!(email: "player1@example.com") do |u|
-  u.name = "Player One"
-end
+# Batch insert games
+result = Game.insert_all(game_rows)
+puts "Created #{result.count} games."
 
-user3 = User.find_or_create_by!(email: "player2@example.com") do |u|
-  u.name = "Player Two"
-end
+# ── 4. Participations ───────────────────────────────────────────
+games = Game.select(:id, :host_id, :players_count, :max_players).where('id > ?', 0).to_a
 
-user4 = User.find_or_create_by!(email: "player3@example.com") do |u|
-  u.name = "Player Three"
-end
+games.each do |game|
+  participants = [game.host_id]
 
-puts "Creating ranks..."
+  remaining = game.players_count - 1
+  if remaining.positive?
+    others = (user_ids - [game.host_id]).sample(remaining)
+    participants.concat(others)
+  end
 
-[
-  { user: user1, rating: 1300, tier: :gold, division: 2 },
-  { user: user2, rating: 800, tier: :silver, division: 3 },
-  { user: user3, rating: 2000, tier: :diamond, division: 1 },
-  { user: user4, rating: 400, tier: :bronze, division: 2 }
-].each do |attrs|
-  Rank.find_or_create_by!(user: attrs[:user]) do |r|
-    r.rating = attrs[:rating]
-    r.tier = attrs[:tier]
-    r.division = attrs[:division]
+  participants.each_with_index do |uid, idx|
+    team = idx.even? ? 0 : 1
+    participation_rows << {
+      user_id: uid, game_id: game.id, team: team,
+      winner: false, created_at: now, updated_at: now
+    }
   end
 end
 
-puts "Seeded #{User.count} users with ranks."
+GameParticipation.insert_all(participation_rows) if participation_rows.any?
+puts "Created #{participation_rows.size} participations."
 
-puts 'Creating games...'
-
-hosts = [user1, user2, user3, user4]
-
-games_data = [
-  { lat: 10.7769, lng: 106.7009, match_type: :doubles, min_tier: :bronze, max_tier: :gold, offset_hours: 1 },
-  { lat: 10.7800, lng: 106.6950, match_type: :singles, min_tier: :silver, max_tier: :platinum, offset_hours: 2 },
-  { lat: 10.7620, lng: 106.6820, match_type: :doubles, min_tier: :bronze, max_tier: :silver, offset_hours: 3 },
-  { lat: 10.8010, lng: 106.7150, match_type: :singles, min_tier: :gold, max_tier: :diamond, offset_hours: 4 },
-  { lat: 10.7550, lng: 106.6600, match_type: :doubles, min_tier: :bronze, max_tier: :master, offset_hours: 5 },
-  { lat: 10.7900, lng: 106.7100, match_type: :singles, min_tier: :silver, max_tier: :gold, offset_hours: 6 },
-  { lat: 10.7700, lng: 106.6900, match_type: :doubles, min_tier: :platinum, max_tier: :diamond, offset_hours: 8 },
-  { lat: 10.7650, lng: 106.7050, match_type: :singles, min_tier: :bronze, max_tier: :platinum, offset_hours: 12 },
-  { lat: 10.8100, lng: 106.7200, match_type: :doubles, min_tier: :gold, max_tier: :master, offset_hours: 24 },
-  { lat: 10.7450, lng: 106.6750, match_type: :singles, min_tier: :bronze, max_tier: :gold, offset_hours: 48 }
-]
-
-games_data.each_with_index do |data, i|
-  host = hosts[i % hosts.size]
-  max_players = data[:match_type] == :singles ? 2 : 4
-  start = Time.current + data[:offset_hours].hours
-
-  game = Game.create!(
-    start_time: start,
-    end_time: start + 1.hour,
-    lat: data[:lat],
-    lng: data[:lng],
-    match_type: data[:match_type],
-    min_tier: data[:min_tier],
-    max_tier: data[:max_tier],
-    max_players: max_players,
-    host: host,
-    players_count: 1,
-    status: :open
-  )
-  game.game_participations.create!(user: host, team: :team_a)
-  puts "  Game ##{game.id}: #{data[:match_type]} at (#{data[:lat]}, #{data[:lng]}) starting in #{data[:offset_hours]}h"
-end
-
-puts "Seeded #{Game.count} games."
+puts 'Seed complete.'
