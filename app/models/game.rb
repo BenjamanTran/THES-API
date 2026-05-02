@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Game < ApplicationRecord
+  include GameSearchable
+
   has_many :game_participations, dependent: :destroy
   has_many :users, through: :game_participations
   belongs_to :host, class_name: 'User', optional: true

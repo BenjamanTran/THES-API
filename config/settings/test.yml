@@ -1,4 +1,1 @@
-redis:
-  host: localhost
-  port: 6379
-  db: 1
+# All config comes from ENV (.env.test file via dotenv-rails)

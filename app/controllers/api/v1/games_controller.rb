@@ -3,8 +3,8 @@
 module Api
   module V1
     class GamesController < BaseController
-      skip_before_action :set_current_user, only: %i[index show]
-      before_action :set_current_user_optional, only: %i[index show]
+      skip_before_action :set_current_user, only: %i[index show search]
+      before_action :set_current_user_optional, only: %i[index show search]
       before_action :set_game, only: %i[show join leave]
 
       MAX_PER_PAGE = 50
@@ -13,6 +13,11 @@ module Api
         games = filtered_games.page(params[:page]).per(clamped_per_page)
 
         render json: { games: games.map { |g| game_list_item(g) }, meta: pagination_meta(games) }
+      end
+
+      def search
+        result = Games::SearchService.call(params: search_params, user: @current_user)
+        render json: { games: result.data[:games] }
       end
 
       def show
@@ -62,6 +67,10 @@ module Api
 
       def game_params
         params.permit(:start_time, :end_time, :lat, :lng, :match_type, :min_tier, :max_tier, :max_players)
+      end
+
+      def search_params
+        params.permit(:lat, :lng, :radius, :tier, :from_time, :status, :page, :per_page).to_h.symbolize_keys
       end
 
       def filtered_games

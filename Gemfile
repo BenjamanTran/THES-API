@@ -25,6 +25,9 @@ gem 'solid_cable'
 gem 'sidekiq'
 gem 'sidekiq-cron'
 
+# Environment variables from .env files
+gem 'dotenv-rails'
+
 # App settings (config/settings.yml)
 gem 'config'
 
@@ -50,9 +53,10 @@ gem 'kaminari'
 gem 'rswag-api'
 gem 'rswag-ui'
 
-# Elasticsearch integration with ActiveRecord
+# Elasticsearch integration
 gem 'elasticsearch-model', '~> 8.0.1'
 gem 'elasticsearch-rails', '~> 8.0.1'
+gem 'elasticsearch-persistence', '~> 8.0.1'
 
 group :development do
   gem 'bullet'
