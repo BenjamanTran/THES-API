@@ -96,7 +96,10 @@ module Api
       end
 
       def game_list_item(game)
-        item = game.slice(:id, :start_time, :end_time, :status, :players_count, :max_players)
+        item = game.slice(:id, :start_time, :end_time, :status, :match_type,
+                          :players_count, :max_players, :lat, :lng, :location,
+                          :description, :min_tier, :max_tier)
+        item[:host] = { id: game.host&.id, name: game.host&.name }
         item[:fit_level] = game.fit_level(@current_user) if @current_user
         item
       end

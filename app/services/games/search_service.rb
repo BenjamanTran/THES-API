@@ -20,19 +20,20 @@ module Games
 
     def search_elasticsearch
       response = Game.__elasticsearch__.search(@query_builder.build)
-      response.results.map { |r| build_result(r) }
+      ids = response.results.map { |r| r._id.to_i }
+      games_by_id = Game.includes(:host).where(id: ids).index_by(&:id)
+
+      response.results.filter_map { |r| build_result(r, games_by_id[r._id.to_i]) }
     end
 
-    def build_result(result)
+    def build_result(result, game)
+      return unless game
+
       source = result._source
-      item = {
-        id: result._id.to_i,
-        start_time: source.start_time,
-        end_time: source.end_time,
-        status: source.status,
-        players_count: source.players_count,
-        max_players: source.max_players
-      }
+      item = game.slice(:id, :start_time, :end_time, :status, :match_type,
+                        :players_count, :max_players, :lat, :lng, :location,
+                        :description, :min_tier, :max_tier)
+      item[:host] = { id: game.host&.id, name: game.host&.name }
       item[:distance_km] = distance_km(result) if @query_builder.location_provided?
       item[:fit_level] = compute_fit_level(source) if @user&.rank
       item
@@ -64,7 +65,8 @@ module Games
     end
 
     def fallback_sql
-      Game.where(start_time: Time.current..)
+      Game.includes(:host)
+          .where(start_time: Time.current..)
           .where.not(status: :cancelled)
           .order(start_time: :asc)
           .limit(20)
@@ -72,7 +74,10 @@ module Games
     end
 
     def fallback_item(game)
-      item = game.slice(:id, :start_time, :end_time, :status, :players_count, :max_players)
+      item = game.slice(:id, :start_time, :end_time, :status, :match_type,
+                        :players_count, :max_players, :lat, :lng, :location,
+                        :description, :min_tier, :max_tier)
+      item[:host] = { id: game.host&.id, name: game.host&.name }
       item[:fit_level] = game.fit_level(@user) if @user
       item
     end
