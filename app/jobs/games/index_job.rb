@@ -5,6 +5,8 @@ module Games
     queue_as :elasticsearch
 
     def perform(game_id)
+      return unless Rails.application.config.x.elasticsearch_enabled
+
       game = Game.find_by(id: game_id)
       return unless game
 

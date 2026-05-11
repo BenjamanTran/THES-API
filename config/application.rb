@@ -31,5 +31,12 @@ module Api
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
     config.active_job.queue_adapter = :sidekiq
+
+    # Enable cookies + signed cookie session for browser-based clients.
+    config.middleware.use ActionDispatch::Cookies
+    config.middleware.use ActionDispatch::Session::CookieStore,
+                          key: '_smashhub_session',
+                          same_site: :lax,
+                          secure: Rails.env.production?
   end
 end

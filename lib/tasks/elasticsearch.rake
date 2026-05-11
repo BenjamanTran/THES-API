@@ -5,8 +5,17 @@ namespace :elasticsearch do
     @repo ||= GameRepository.new
   end
 
+  def ensure_enabled!
+    return true if Rails.application.config.x.elasticsearch_enabled
+
+    puts 'Elasticsearch is disabled. Set ELASTICSEARCH_ENABLED=true to run this task.'
+    false
+  end
+
   desc 'Create initial index with alias (first-time setup)'
   task setup: :environment do
+    next unless ensure_enabled!
+
     if repo.alias_exists?
       puts "Alias '#{GameSearchable::ALIAS_NAME}' already exists."
       next
@@ -19,12 +28,16 @@ namespace :elasticsearch do
 
   desc 'Blue-green reindex'
   task reindex: :environment do
+    next unless ensure_enabled!
+
     ElasticsearchReindexer.new(repo).run
     puts 'Reindex complete. Check Rails logs for details.'
   end
 
   desc 'Show current alias and index info'
   task status: :environment do
+    next unless ensure_enabled!
+
     indices = repo.alias_exists? ? repo.current_indices : []
     indices.each { |idx| puts "#{GameSearchable::ALIAS_NAME} -> #{idx} (#{repo.doc_count(idx)} docs)" }
     puts 'No alias found. Run elasticsearch:setup first.' if indices.empty?
@@ -32,6 +45,8 @@ namespace :elasticsearch do
 
   desc 'Delete all game indices and alias'
   task drop: :environment do
+    next unless ensure_enabled!
+
     indices = repo.all_game_indices
     repo.delete_indices(indices)
     indices.each { |idx| puts "Deleted #{idx}." }

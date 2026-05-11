@@ -51,12 +51,14 @@ paths:
         schema:
           type: string
           enum:
-          - bronze
-          - silver
-          - gold
-          - platinum
-          - diamond
-          - master
+          - newbie
+          - beginner_plus
+          - lower_intermediate
+          - intermediate
+          - upper_intermediate
+          - advanced
+          - semi_pro
+          - professional
       - name: from_time
         in: query
         required: false
@@ -213,23 +215,29 @@ paths:
                 min_tier:
                   type: string
                   enum:
-                  - bronze
-                  - silver
-                  - gold
-                  - platinum
-                  - diamond
-                  - master
-                  example: bronze
+                  - newbie
+                  - yeu
+                  - yeu_plus
+                  - trung_binh_yeu
+                  - trung_binh_minus
+                  - trung_binh_plus
+                  - kha
+                  - ban_chuyen
+                  - chuyen_nghiep
+                  example: beginner
                 max_tier:
                   type: string
                   enum:
-                  - bronze
-                  - silver
-                  - gold
-                  - platinum
-                  - diamond
-                  - master
-                  example: gold
+                  - newbie
+                  - yeu
+                  - yeu_plus
+                  - trung_binh_yeu
+                  - trung_binh_minus
+                  - trung_binh_plus
+                  - kha
+                  - ban_chuyen
+                  - chuyen_nghiep
+                  example: advanced
                 max_players:
                   type: integer
                   enum:
@@ -362,12 +370,14 @@ paths:
         schema:
           type: string
           enum:
-          - bronze
-          - silver
-          - gold
-          - platinum
-          - diamond
-          - master
+          - newbie
+          - beginner_plus
+          - lower_intermediate
+          - intermediate
+          - upper_intermediate
+          - advanced
+          - semi_pro
+          - professional
       - name: from_time
         in: query
         required: false

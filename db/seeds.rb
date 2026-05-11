@@ -16,11 +16,14 @@ puts "Created #{user_ids.size} users."
 # ── 2. Ranks ────────────────────────────────────────────────────
 TIERS = Rank.tiers.keys
 RATING_RANGES = {
-  'bronze' => 0..799,
-  'silver' => 800..1199,
-  'gold' => 1200..1599,
-  'platinum' => 1600..1999,
-  'diamond' => 2000..2499
+  'newbie' => 0..399,
+  'beginner_plus' => 400..799,
+  'lower_intermediate' => 800..1199,
+  'intermediate' => 1200..1499,
+  'upper_intermediate' => 1500..1799,
+  'advanced' => 1800..2099,
+  'semi_pro' => 2100..2399,
+  'professional' => 2400..2700
 }.freeze
 
 existing_rank_user_ids = Rank.pluck(:user_id)
@@ -67,8 +70,8 @@ participation_rows = []
   start_time = now + rand(1..72).hours + rand(0..59).minutes
   end_time = start_time + rand(60..90).minutes
 
-  min_tier = rand(0..3)
-  max_tier = [min_tier + rand(0..2), 4].min
+  min_tier = rand(0..5)
+  max_tier = [min_tier + rand(0..2), 7].min
 
   match_type_key = %w[singles doubles].sample
   max_players = match_type_key == 'singles' ? 2 : 4

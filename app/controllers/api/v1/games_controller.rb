@@ -8,6 +8,7 @@ module Api
       before_action :set_game, only: %i[show join leave]
 
       MAX_PER_PAGE = 50
+      DEFAULT_PER_PAGE = 20
 
       def index
         games = filtered_games.page(params[:page]).per(clamped_per_page)
@@ -17,7 +18,7 @@ module Api
 
       def search
         result = Games::SearchService.call(params: search_params, user: @current_user)
-        render json: { games: result.data[:games] }
+        render json: { games: result.data[:games], meta: result.data[:meta] }
       end
 
       def show
@@ -66,24 +67,47 @@ module Api
       end
 
       def game_params
-        params.permit(:start_time, :end_time, :lat, :lng, :match_type, :min_tier, :max_tier, :max_players)
+        params.permit(:start_time, :end_time, :lat, :lng, :match_type, :min_tier, :max_tier,
+                      :max_players, :description, :min_price, :max_price, courts: [])
       end
 
       def search_params
-        params.permit(:lat, :lng, :radius, :tier, :from_time, :status, :page, :per_page).to_h.symbolize_keys
+        params.permit(:lat, :lng, :radius, :tier, :from_time, :status,
+                      :page, :per_page, :sort, :not_full, :match_type, :price_max).to_h.symbolize_keys
       end
 
       def filtered_games
-        Game.upcoming
+        scope = base_filtered_scope
+        scope = mine_scope(scope) if mine_filter?
+        scope.includes(:host).order(start_time: order_direction)
+      end
+
+      def base_filtered_scope
+        Game.by_time(params[:time])
             .by_status(params[:status])
             .by_time_from(params[:from_time])
             .by_time_to(params[:to_time])
             .by_tier(params[:tier])
-            .order(start_time: :asc)
+      end
+
+      def order_direction
+        params[:time].to_s == 'past' ? :desc : :asc
+      end
+
+      def mine_filter?
+        ActiveModel::Type::Boolean.new.cast(params[:mine])
+      end
+
+      def mine_scope(scope)
+        return scope.none unless @current_user
+
+        scope.hosted_or_joined_by(@current_user)
       end
 
       def clamped_per_page
-        [params[:per_page].to_i, MAX_PER_PAGE].min.clamp(1, MAX_PER_PAGE)
+        requested = params[:per_page].to_i
+        requested = DEFAULT_PER_PAGE if requested <= 0
+        requested.clamp(1, MAX_PER_PAGE)
       end
 
       def pagination_meta(collection)
@@ -98,24 +122,22 @@ module Api
       def game_list_item(game)
         item = game.slice(:id, :start_time, :end_time, :status, :match_type,
                           :players_count, :max_players, :lat, :lng, :location,
-                          :description, :min_tier, :max_tier)
+                          :description, :min_tier, :max_tier, :courts,
+                          :min_price, :max_price)
         item[:host] = { id: game.host&.id, name: game.host&.name }
         item[:fit_level] = game.fit_level(@current_user) if @current_user
         item
       end
 
       def game_detail(game)
-        {
-          id: game.id,
-          start_time: game.start_time,
-          end_time: game.end_time,
-          status: game.status,
-          match_type: game.match_type,
-          players_count: game.players_count,
-          max_players: game.max_players,
-          host: { id: game.host&.id, name: game.host&.name },
-          players: game.users.map { |u| { id: u.id, name: u.name } }
-        }
+        detail = game.slice(:id, :start_time, :end_time, :status, :match_type,
+                            :players_count, :max_players, :lat, :lng, :location,
+                            :description, :min_tier, :max_tier, :courts,
+                            :min_price, :max_price)
+        detail[:host] = { id: game.host&.id, name: game.host&.name }
+        detail[:players] = game.users.map { |u| { id: u.id, name: u.name } }
+        detail[:fit_level] = game.fit_level(@current_user) if @current_user
+        detail
       end
     end
   end

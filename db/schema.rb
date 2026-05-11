@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_02_130001) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_11_160001) do
   create_table "game_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "game_id", null: false
@@ -26,6 +26,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_02_130001) do
   end
 
   create_table "games", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.json "courts"
     t.datetime "created_at", null: false
     t.text "description"
     t.datetime "end_time"
@@ -35,13 +36,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_02_130001) do
     t.string "location"
     t.integer "match_type", default: 0, null: false
     t.integer "max_players", default: 2, null: false
+    t.integer "max_price", default: 0, null: false
     t.integer "max_tier", default: 5, null: false
+    t.integer "min_price", default: 0, null: false
     t.integer "min_tier", default: 0, null: false
     t.integer "players_count", default: 0, null: false
     t.datetime "start_time"
     t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
     t.index ["host_id"], name: "index_games_on_host_id"
+    t.index ["min_price"], name: "index_games_on_min_price"
     t.index ["min_tier", "max_tier"], name: "index_games_on_min_tier_and_max_tier"
     t.index ["start_time"], name: "index_games_on_start_time"
     t.index ["status"], name: "index_games_on_status"
@@ -76,9 +80,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_02_130001) do
   create_table "users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email", null: false
+    t.integer "gender", default: 0, null: false
     t.string "name", null: false
+    t.string "password_digest"
+    t.string "phone"
+    t.string "session_token"
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["session_token"], name: "index_users_on_session_token", unique: true
   end
 
   add_foreign_key "game_participations", "games"
