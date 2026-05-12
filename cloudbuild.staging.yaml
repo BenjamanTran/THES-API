@@ -1,5 +1,8 @@
-# Staging pipeline: push branch `staging` with changes under `api/`
-# (configure trigger in GCP — see api/README.md).
+# Staging pipeline: push branch (e.g. staging_v1) with Cloud Build config from this file.
+#
+# Build context directory (dir for docker-build):
+#   - Monorepo THE_S (Dockerfile under api/): default _API_BUILD_DIR=api — no trigger override.
+#   - API-only repo (Dockerfile at root, e.g. THES-API): set trigger substitution _API_BUILD_DIR=.
 #
 # Required IAM on the Cloud Build service account (or custom SA on the trigger):
 #   artifactregistry.repositories.uploadArtifacts, artifactregistry.dockerImages.push
@@ -8,6 +11,8 @@
 
 substitutions:
   _REGION: asia-southeast1
+  # Monorepo: api/. API-only repo at root: override on the Cloud Build trigger with _API_BUILD_DIR=.
+  _API_BUILD_DIR: api
   # Artifact Registry repository id (create once per project: gcloud artifacts repositories create ...)
   _AR_REPOSITORY: the-s-api-staging
   # Auto-deploy via IAP SSH: requires script on VM at /opt/the_s/gcp_staging_deploy_on_vm.sh + Cloud Build IAM (see api/README.md)
@@ -25,7 +30,7 @@ steps:
   # --- Production image ---
   - id: docker-build
     name: gcr.io/cloud-builders/docker
-    dir: api
+    dir: ${_API_BUILD_DIR}
     args:
       - build
       - -f
@@ -50,7 +55,9 @@ steps:
     args:
       - -c
       - |
-        set -euo pipefail
+        set -euxo pipefail
+        echo "deploy-gce: PROJECT_ID=${PROJECT_ID} SHORT_SHA=${SHORT_SHA}"
+        echo "deploy-gce: _DEPLOY=${_DEPLOY} _GCE_INSTANCE=${_GCE_INSTANCE} _GCE_ZONE=${_GCE_ZONE}"
         if [[ "${_DEPLOY}" != "true" ]]; then
           echo "Skipping GCE deploy (_DEPLOY != true). Image pushed to Artifact Registry."
           exit 0
@@ -64,6 +71,7 @@ steps:
           --zone="${_GCE_ZONE}" \
           --tunnel-through-iap \
           --quiet \
+          --verbosity=info \
           --command="sudo /opt/the_s/gcp_staging_deploy_on_vm.sh ${_REGION} ${PROJECT_ID} ${_AR_REPOSITORY} ${SHORT_SHA}"
 
 images:
