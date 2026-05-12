@@ -83,8 +83,8 @@ steps:
               'xenv=()' \
               'if [[ ! -f "${ef}" ]]; then xenv=(-e RAILS_MASTER_KEY="${RAILS_MASTER_KEY:-}" -e API_DATABASE_PASSWORD="${API_DATABASE_PASSWORD:-}" -e DB_HOST="${DB_HOST:-127.0.0.1}"); fi' \
               'docker pull "${img}"' \
-              'if docker inspect api-staging &>/dev/null; then docker stop api-staging || true; docker rm api-staging || true; fi' \
-              'docker run -d --name api-staging --restart unless-stopped -p 127.0.0.1:3000:80 "${ef_args[@]}" "${xenv[@]}" -e RAILS_ENV=staging "${img}"' \
+              'for c in api-staging the-s-api; do if docker inspect "$c" &>/dev/null; then docker stop "$c" || true; docker rm "$c" || true; fi; done' \
+              'docker run -d --name the-s-api --network=host --restart always --log-driver=gcplogs "${ef_args[@]}" "${xenv[@]}" -e RAILS_ENV=staging "${img}" bash -c "bundle exec rails db:migrate && bundle exec puma -C config/puma.rb"' \
               'echo "Deployed ${img}"'
           )" | base64 -w0
         )
