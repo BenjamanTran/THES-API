@@ -10,6 +10,33 @@ TAG="${4:?}"
 
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_ID}/api:${TAG}"
 
+# Rails / DB secrets: create on the VM once (root-only), e.g.:
+#   sudo install -d -m 755 /etc/the_s
+#   sudo sh -c 'umask 077; cat > /etc/the_s/api-staging.env' <<'EOF'
+#   RAILS_MASTER_KEY=...
+#   DB_HOST=127.0.0.1
+#   DB_USERNAME=root
+#   DB_PASSWORD=...
+#   (If you add a `staging:` section mirroring production credentials:)
+#   API_DATABASE_PASSWORD=...
+#   EOF
+# One KEY=value per line. Optional: add REDIS_URL, etc., if your app reads them at boot.
+ENV_FILE="/etc/the_s/api-staging.env"
+DOCKER_ENV_FILE=()
+if [[ -f "${ENV_FILE}" ]]; then
+  DOCKER_ENV_FILE=(--env-file "${ENV_FILE}")
+fi
+
+# Extra -e only when no env file: avoid empty -e overriding values from --env-file.
+EXTRA_ENV=()
+if [[ ! -f "${ENV_FILE}" ]]; then
+  EXTRA_ENV=(
+    -e RAILS_MASTER_KEY="${RAILS_MASTER_KEY:-}"
+    -e API_DATABASE_PASSWORD="${API_DATABASE_PASSWORD:-}"
+    -e DB_HOST="${DB_HOST:-127.0.0.1}"
+  )
+fi
+
 # VM service account needs roles/artifactregistry.reader (or equivalent) on this repo.
 # Ensure Artifact Registry Docker auth once on the VM, e.g.:
 #   sudo apt-get install -y google-cloud-sdk-docker-credential-gcr && \
@@ -25,10 +52,9 @@ if docker ps -a --format '{{.Names}}' | grep -qx api-staging; then
 fi
 
 docker run -d --name api-staging --restart unless-stopped -p 127.0.0.1:3000:80 \
+  "${DOCKER_ENV_FILE[@]}" \
+  "${EXTRA_ENV[@]}" \
   -e RAILS_ENV=staging \
-  -e RAILS_MASTER_KEY="${RAILS_MASTER_KEY:-}" \
-  -e API_DATABASE_PASSWORD="${API_DATABASE_PASSWORD:-}" \
-  -e DATABASE_HOST="${DATABASE_HOST:-127.0.0.1}" \
   "${IMAGE}"
 
 echo "Deployed ${IMAGE}"

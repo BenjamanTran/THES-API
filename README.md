@@ -28,7 +28,8 @@ CI templates for GCP live under `api/` in THE_S for convenience: **copy** `cloud
 3. **IAM** for the Cloud Build service account (replace `PROJECT_NUMBER`):
 
    - `roles/artifactregistry.writer`
-   - For GCE auto-deploy: SSH via IAP — e.g. `roles/compute.instanceAdmin.v1` (or narrower), `roles/iap.tunnelResourceAccessor` on the VM; the VM’s service account needs `roles/artifactregistry.reader` to `docker pull`.
+   - **If `_DEPLOY=true` (SSH to GCE):** the identity running the build needs **`roles/compute.instanceAdmin.v1`** (or at least `compute.instances.setMetadata` + `compute.instances.get`) and **`roles/iap.tunnelResourceAccessor`** on the project (or equivalent on the VM). Terraform staging applies this for the **default** Cloud Build SA (`PROJECT_NUMBER@cloudbuild.gserviceaccount.com`); if the trigger uses a **custom** service account, grant the same roles to that account.
+   - For GCE auto-deploy: VM service account needs `roles/artifactregistry.reader` to `docker pull`.
 
 4. **Trigger** (Console or CLI):
 
