@@ -7,15 +7,15 @@
 #
 # Required IAM on the Cloud Build service account (or custom SA on the trigger):
 #   artifactregistry.repositories.uploadArtifacts, artifactregistry.dockerImages.push
-#   compute.instances.get, iap.tunnelInstances.access (if _DEPLOY=true and GCE SSH)
-# Optional for deploy: compute.projects.get, compute.instances.setMetadata (depends on setup)
+#   compute.instances.get, iap.tunnelInstances.access, compute.instances.setMetadata (if _DEPLOY=true)
+# Optional: compute.projects.setCommonInstanceMetadata (gcloud may try project SSH metadata first)
 
 substitutions:
   _REGION: asia-southeast1
   _API_BUILD_DIR: "."
   # Artifact Registry repository id (create once per project: gcloud artifacts repositories create ...)
   _AR_REPOSITORY: the-s-api-staging
-  # Auto-deploy via IAP SSH: script on VM at /opt/the_s/gcp_staging_deploy_on_vm.sh + IAM (see api/README.md)
+  # Auto-deploy via IAP SSH: inline script (no /opt/the_s/*.sh required on VM). IAM: api/README.md
   _DEPLOY: "true"
   _GCE_INSTANCE: "the-s-staging-gce-api"
   _GCE_ZONE: asia-southeast1-a
@@ -67,13 +67,34 @@ steps:
           echo "ERROR: _DEPLOY=true but _GCE_INSTANCE is empty."
           exit 1
         fi
+        # Remote bash (after base64 decode on VM). Single-quoted printf lines keep $ for the VM.
+        remote_b64=$(
+          printf '%s' "$(
+            printf '%s\n' \
+              'set -euo pipefail' \
+              "r='${_REGION}'" \
+              "p='${PROJECT_ID}'" \
+              "repo='${_AR_REPOSITORY}'" \
+              "tag='${SHORT_SHA}'" \
+              'img="${r}-docker.pkg.dev/${p}/${repo}/api:${tag}"' \
+              'ef=/etc/the_s/api-staging.env' \
+              'ef_args=()' \
+              'if [[ -f "${ef}" ]]; then ef_args=(--env-file "${ef}"); fi' \
+              'xenv=()' \
+              'if [[ ! -f "${ef}" ]]; then xenv=(-e RAILS_MASTER_KEY="${RAILS_MASTER_KEY:-}" -e API_DATABASE_PASSWORD="${API_DATABASE_PASSWORD:-}" -e DB_HOST="${DB_HOST:-127.0.0.1}"); fi' \
+              'docker pull "${img}"' \
+              'if docker inspect api-staging &>/dev/null; then docker stop api-staging || true; docker rm api-staging || true; fi' \
+              'docker run -d --name api-staging --restart unless-stopped -p 127.0.0.1:3000:80 "${ef_args[@]}" "${xenv[@]}" -e RAILS_ENV=staging "${img}"' \
+              'echo "Deployed ${img}"'
+          )" | base64 -w0
+        )
         gcloud compute ssh "${_GCE_INSTANCE}" \
           --project="${PROJECT_ID}" \
           --zone="${_GCE_ZONE}" \
           --tunnel-through-iap \
           --quiet \
           --verbosity=info \
-          --command="sudo /opt/the_s/gcp_staging_deploy_on_vm.sh ${_REGION} ${PROJECT_ID} ${_AR_REPOSITORY} ${SHORT_SHA}"
+          --command="echo \"$${remote_b64}\" | base64 -d | sudo bash"
 
 images:
   - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/api:$SHORT_SHA

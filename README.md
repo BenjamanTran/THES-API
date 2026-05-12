@@ -51,7 +51,7 @@ CI templates for GCP live under `api/` in THE_S for convenience: **copy** `cloud
      --substitutions=_REGION=asia-southeast1,_AR_REPOSITORY=the-s-api-staging,_DEPLOY=false,_GCE_INSTANCE=,_GCE_ZONE=asia-southeast1-a
    ```
 
-5. **Deploy on GCE:** on the VM, place `gcp_staging_deploy_on_vm.sh` under e.g. `/opt/the_s/`, `chmod +x`, configure Rails/DB env (see script comments). Set trigger substitutions `_DEPLOY=true`, `_GCE_INSTANCE`, `_GCE_ZONE` when ready.
+5. **Deploy on GCE:** Cloud Build’s **`deploy-gce`** step runs the deploy commands over IAP SSH (no `/opt/the_s/*.sh` required). For **manual** deploys from your laptop, you can still copy `script/gcp_staging_deploy_on_vm.sh` to the VM (e.g. `/opt/the_s/`), `chmod +x`, and run it with the same four arguments. Configure **`/etc/the_s/api-staging.env`** on the VM for Rails/DB (see script comments). Set trigger substitutions `_DEPLOY=true`, `_GCE_INSTANCE`, `_GCE_ZONE` when ready.
 
 Pipeline: **docker build** (repo-root `Dockerfile`) → **push** `api:$SHORT_SHA` and `api:staging-latest` → optional **IAP SSH** + script on the VM.
 

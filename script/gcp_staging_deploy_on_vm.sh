@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Install on the staging API VM (e.g. /opt/the_s/gcp_staging_deploy_on_vm.sh, mode 755, root-owned).
-# Cloud Build calls this via IAP SSH with: REGION PROJECT_ID REPO_ID GIT_SHA
+# Optional: run manually on the VM (e.g. after copying to /opt/the_s/). Cloud Build deploy-gce
+# embeds the same logic in api/cloudbuild.staging.yaml (base64 over IAP SSH) — keep these in sync.
+# Cloud Build (when using this file directly) calls with: REGION PROJECT_ID REPO_ID GIT_SHA
 set -euo pipefail
 
 REGION="${1:?}"
