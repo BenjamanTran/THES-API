@@ -47,8 +47,8 @@ module Api
         cookies.signed[SESSION_COOKIE] = {
           value: { user_id: user.id, token: user.session_token },
           httponly: true,
-          same_site: :lax,
-          secure: Rails.env.production?,
+          same_site: Rails.env.development? ? :lax : :none,
+          secure: !Rails.env.development?,
           expires: 30.days.from_now
         }
       end
