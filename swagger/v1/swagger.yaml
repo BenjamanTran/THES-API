@@ -539,3 +539,5 @@ paths:
 servers:
 - url: http://localhost:3000
   description: Local development
+- url: http://34.126.72.131:3000
+  description: Staging
