@@ -35,13 +35,12 @@ steps:
       - -c
       - |
         set -euxo pipefail
-        CTX="${_API_BUILD_DIR}"
-        echo "docker-build: context=${CTX} (Dockerfile ${CTX}/Dockerfile)"
+        echo "docker-build: context=${_API_BUILD_DIR} (Dockerfile ${_API_BUILD_DIR}/Dockerfile)"
         docker build \
-          -f "${CTX}/Dockerfile" \
+          -f "${_API_BUILD_DIR}/Dockerfile" \
           -t "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPOSITORY}/api:${SHORT_SHA}" \
           -t "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPOSITORY}/api:staging-latest" \
-          "${CTX}"
+          "${_API_BUILD_DIR}"
 
   - id: docker-push
     name: gcr.io/cloud-builders/docker
