@@ -36,7 +36,7 @@ module Api
     config.middleware.use ActionDispatch::Cookies
     config.middleware.use ActionDispatch::Session::CookieStore,
                           key: '_smashhub_session',
-                          same_site: :lax,
-                          secure: Rails.env.production?
+                          same_site: Rails.env.development? ? :lax : :none,
+                          secure: !Rails.env.development?
   end
 end
