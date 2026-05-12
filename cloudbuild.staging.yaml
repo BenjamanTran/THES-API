@@ -1,0 +1,71 @@
+# Staging pipeline: push branch `staging` with changes under `api/`
+# (configure trigger in GCP — see api/README.md).
+#
+# Required IAM on the Cloud Build service account (or custom SA on the trigger):
+#   artifactregistry.repositories.uploadArtifacts, artifactregistry.dockerImages.push
+#   compute.instances.get, iap.tunnelInstances.access (if _DEPLOY=true and GCE SSH)
+# Optional for deploy: compute.projects.get, compute.instances.setMetadata (depends on setup)
+
+substitutions:
+  _REGION: asia-southeast1
+  # Artifact Registry repository id (create once per project: gcloud artifacts repositories create ...)
+  _AR_REPOSITORY: the-s-api-staging
+  # Auto-deploy via IAP SSH: requires script on VM at /opt/the_s/gcp_staging_deploy_on_vm.sh + Cloud Build IAM (see api/README.md)
+  _DEPLOY: "true"
+  _GCE_INSTANCE: "the-s-staging-gce-api"
+  _GCE_ZONE: asia-southeast1-a
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+
+timeout: 1800s
+
+steps:
+  # --- Production image ---
+  - id: docker-build
+    name: gcr.io/cloud-builders/docker
+    dir: api
+    args:
+      - build
+      - -f
+      - Dockerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/api:$SHORT_SHA
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/api:staging-latest
+      - .
+
+  - id: docker-push
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/api
+
+  # --- Optional: pull + restart on GCE (IAP SSH) ---
+  - id: deploy-gce
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        if [[ "${_DEPLOY}" != "true" ]]; then
+          echo "Skipping GCE deploy (_DEPLOY != true). Image pushed to Artifact Registry."
+          exit 0
+        fi
+        if [[ -z "${_GCE_INSTANCE}" ]]; then
+          echo "ERROR: _DEPLOY=true but _GCE_INSTANCE is empty."
+          exit 1
+        fi
+        gcloud compute ssh "${_GCE_INSTANCE}" \
+          --project="${PROJECT_ID}" \
+          --zone="${_GCE_ZONE}" \
+          --tunnel-through-iap \
+          --quiet \
+          --command="sudo /opt/the_s/gcp_staging_deploy_on_vm.sh ${_REGION} ${PROJECT_ID} ${_AR_REPOSITORY} ${SHORT_SHA}"
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/api:$SHORT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/api:staging-latest
