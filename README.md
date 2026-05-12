@@ -55,3 +55,5 @@ CI templates for GCP live under `api/` in THE_S for convenience: **copy** `cloud
 Pipeline: **docker build** (repo-root `Dockerfile`) → **push** `api:$SHORT_SHA` and `api:staging-latest` → optional **IAP SSH** + script on the VM.
 
 **Note:** The Cloud Build pipeline does not run the full test suite yet (MySQL/Redis in CI can be added later).
+
+**Docker / Linux AMD64:** Cloud Build uses `x86_64-linux`. If you lock gems on Apple Silicon only, run `bundle lock --add-platform x86_64-linux` (Ruby 3.4 + Bundler 2.6) and commit `Gemfile.lock` so production Docker builds succeed.
