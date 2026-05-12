@@ -29,8 +29,21 @@ test:
   database: api_test
 
 staging:
-  <<: *default
-  database: <%= ENV.fetch("DB_NAME", "api_staging") %>
+  primary: &primary_staging
+    <<: *default
+    database: <%= ENV.fetch("DB_NAME", "api_staging") %>
+  cache:
+    <<: *primary_staging
+    database: <%= ENV.fetch("DB_NAME", "api_staging") %>_cache
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *primary_staging
+    database: <%= ENV.fetch("DB_NAME", "api_staging") %>_queue
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *primary_staging
+    database: <%= ENV.fetch("DB_NAME", "api_staging") %>_cable
+    migrations_paths: db/cable_migrate
 
 # As with config/credentials.yml, you never want to store sensitive information,
 # like your database password, in your source code. If your source code is
