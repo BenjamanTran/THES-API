@@ -1,8 +1,9 @@
-# Staging pipeline: push branch (e.g. staging_v1) with Cloud Build config from this file.
+# Staging: build + push API image (+ optional GCE deploy). Intended for the API app repo only
+# (Dockerfile at repo root). THE_S holds Terraform/docker-compose; copy this file to your API
+# repo as e.g. cloudbuild.staging.yaml and point the trigger at it.
 #
-# Build context directory (dir for docker-build):
-#   - Monorepo THE_S (Dockerfile under api/): default _API_BUILD_DIR=api — no trigger override.
-#   - API-only repo (Dockerfile at root, e.g. THES-API): set trigger substitution _API_BUILD_DIR=.
+# Build context (relative to /workspace): default "." = repo root. Override _API_BUILD_DIR only if
+# the Dockerfile lives in a subdirectory (e.g. app/).
 #
 # Required IAM on the Cloud Build service account (or custom SA on the trigger):
 #   artifactregistry.repositories.uploadArtifacts, artifactregistry.dockerImages.push
@@ -11,11 +12,10 @@
 
 substitutions:
   _REGION: asia-southeast1
-  # Monorepo: api/. API-only repo at root: override on the Cloud Build trigger with _API_BUILD_DIR=.
-  _API_BUILD_DIR: api
+  _API_BUILD_DIR: "."
   # Artifact Registry repository id (create once per project: gcloud artifacts repositories create ...)
   _AR_REPOSITORY: the-s-api-staging
-  # Auto-deploy via IAP SSH: requires script on VM at /opt/the_s/gcp_staging_deploy_on_vm.sh + Cloud Build IAM (see api/README.md)
+  # Auto-deploy via IAP SSH: script on VM at /opt/the_s/gcp_staging_deploy_on_vm.sh + IAM (see api/README.md)
   _DEPLOY: "true"
   _GCE_INSTANCE: "the-s-staging-gce-api"
   _GCE_ZONE: asia-southeast1-a
@@ -30,16 +30,18 @@ steps:
   # --- Production image ---
   - id: docker-build
     name: gcr.io/cloud-builders/docker
-    dir: ${_API_BUILD_DIR}
+    entrypoint: bash
     args:
-      - build
-      - -f
-      - Dockerfile
-      - -t
-      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/api:$SHORT_SHA
-      - -t
-      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/api:staging-latest
-      - .
+      - -c
+      - |
+        set -euxo pipefail
+        CTX="${_API_BUILD_DIR}"
+        echo "docker-build: context=${CTX} (Dockerfile ${CTX}/Dockerfile)"
+        docker build \
+          -f "${CTX}/Dockerfile" \
+          -t "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPOSITORY}/api:${SHORT_SHA}" \
+          -t "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPOSITORY}/api:staging-latest" \
+          "${CTX}"
 
   - id: docker-push
     name: gcr.io/cloud-builders/docker
