@@ -1,24 +1,18 @@
-# Staging: build + push API image (+ optional GCE deploy). Intended for the API app repo only
-# (Dockerfile at repo root). THE_S holds Terraform/docker-compose; copy this file to your API
-# repo as e.g. cloudbuild.staging.yaml and point the trigger at it.
-#
-# Build context (relative to /workspace): default "." = repo root. Override _API_BUILD_DIR only if
-# the Dockerfile lives in a subdirectory (e.g. app/).
-#
-# Required IAM on the Cloud Build service account (or custom SA on the trigger):
-#   artifactregistry.repositories.uploadArtifacts, artifactregistry.dockerImages.push
-#   compute.instances.get, iap.tunnelInstances.access, compute.instances.setMetadata (if _DEPLOY=true)
-# Optional: compute.projects.setCommonInstanceMetadata (gcloud may try project SSH metadata first)
+# Staging: build + push API image, deploy to Cloud Run.
+# Sensitive env vars should be set as substitution variables on the trigger.
 
 substitutions:
   _REGION: asia-southeast1
   _API_BUILD_DIR: "."
-  # Artifact Registry repository id (create once per project: gcloud artifacts repositories create ...)
   _AR_REPOSITORY: the-s-api-staging
-  # Auto-deploy via IAP SSH: inline script (no /opt/the_s/*.sh required on VM). IAM: api/README.md
-  _DEPLOY: "true"
-  _GCE_INSTANCE: "the-s-staging-gce-api"
-  _GCE_ZONE: asia-southeast1-a
+  _CLOUD_RUN_SERVICE: the-s-api-staging
+  _VPC_CONNECTOR: the-s-staging-connector
+  _DB_HOST: ""
+  _DB_USERNAME: ""
+  _DB_PASSWORD: ""
+  _DB_NAME: ""
+  _RAILS_MASTER_KEY: ""
+  _FE_ORIGIN: ""
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -27,7 +21,6 @@ options:
 timeout: 1800s
 
 steps:
-  # --- Production image ---
   - id: docker-build
     name: gcr.io/cloud-builders/docker
     entrypoint: bash
@@ -35,7 +28,6 @@ steps:
       - -c
       - |
         set -euxo pipefail
-        echo "docker-build: context=${_API_BUILD_DIR} (Dockerfile ${_API_BUILD_DIR}/Dockerfile)"
         docker build \
           -f "${_API_BUILD_DIR}/Dockerfile" \
           -t "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPOSITORY}/api:${SHORT_SHA}" \
@@ -49,52 +41,37 @@ steps:
       - --all-tags
       - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/api
 
-  # --- Optional: pull + restart on GCE (IAP SSH) ---
-  - id: deploy-gce
+  - id: migrate
     name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     entrypoint: bash
     args:
       - -c
       - |
         set -euxo pipefail
-        echo "deploy-gce: PROJECT_ID=${PROJECT_ID} SHORT_SHA=${SHORT_SHA}"
-        echo "deploy-gce: _DEPLOY=${_DEPLOY} _GCE_INSTANCE=${_GCE_INSTANCE} _GCE_ZONE=${_GCE_ZONE}"
-        if [[ "${_DEPLOY}" != "true" ]]; then
-          echo "Skipping GCE deploy (_DEPLOY != true). Image pushed to Artifact Registry."
-          exit 0
-        fi
-        if [[ -z "${_GCE_INSTANCE}" ]]; then
-          echo "ERROR: _DEPLOY=true but _GCE_INSTANCE is empty."
-          exit 1
-        fi
-        # Remote bash (after base64 decode on VM). Single-quoted printf lines keep $ for the VM.
-        remote_b64=$(
-          printf '%s' "$(
-            printf '%s\n' \
-              'set -euo pipefail' \
-              "r='${_REGION}'" \
-              "p='${PROJECT_ID}'" \
-              "repo='${_AR_REPOSITORY}'" \
-              "tag='${SHORT_SHA}'" \
-              'img="${r}-docker.pkg.dev/${p}/${repo}/api:${tag}"' \
-              'ef=/etc/the_s/api-staging.env' \
-              'ef_args=()' \
-              'if [[ -f "${ef}" ]]; then ef_args=(--env-file "${ef}"); fi' \
-              'xenv=()' \
-              'if [[ ! -f "${ef}" ]]; then xenv=(-e RAILS_MASTER_KEY="${RAILS_MASTER_KEY:-}" -e API_DATABASE_PASSWORD="${API_DATABASE_PASSWORD:-}" -e DB_HOST="${DB_HOST:-127.0.0.1}"); fi' \
-              'docker pull "${img}"' \
-              'for c in api-staging the-s-api; do if docker inspect "$c" &>/dev/null; then docker stop "$c" || true; docker rm "$c" || true; fi; done' \
-              'docker run -d --name the-s-api --network=host --restart always --log-driver=gcplogs "${ef_args[@]}" "${xenv[@]}" -e RAILS_ENV=staging "${img}" bash -c "bundle exec rails db:migrate && bundle exec puma -C config/puma.rb"' \
-              'echo "Deployed ${img}"'
-          )" | base64 -w0
-        )
-        gcloud compute ssh "${_GCE_INSTANCE}" \
-          --project="${PROJECT_ID}" \
-          --zone="${_GCE_ZONE}" \
-          --tunnel-through-iap \
-          --quiet \
-          --verbosity=info \
-          --command="echo \"$${remote_b64}\" | base64 -d | sudo bash"
+        gcloud run jobs execute the-s-api-migrate --region=${_REGION} --wait \
+          2>/dev/null || \
+        gcloud run jobs create the-s-api-migrate \
+          --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/api:$SHORT_SHA \
+          --region=${_REGION} \
+          --vpc-connector=${_VPC_CONNECTOR} \
+          --set-env-vars=RAILS_ENV=staging,DB_HOST=${_DB_HOST},DB_USERNAME=${_DB_USERNAME},DB_PASSWORD=${_DB_PASSWORD},DB_NAME=${_DB_NAME},RAILS_MASTER_KEY=${_RAILS_MASTER_KEY} \
+          --command=bundle,exec,rails,db:migrate \
+          --execute-now --wait
+
+  - id: deploy-cloud-run
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    args:
+      - gcloud
+      - run
+      - deploy
+      - ${_CLOUD_RUN_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/api:$SHORT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --quiet
+      - --vpc-connector=${_VPC_CONNECTOR}
+      - --set-env-vars=RAILS_ENV=staging,DB_HOST=${_DB_HOST},DB_USERNAME=${_DB_USERNAME},DB_PASSWORD=${_DB_PASSWORD},DB_NAME=${_DB_NAME},RAILS_MASTER_KEY=${_RAILS_MASTER_KEY},FE_ORIGIN=${_FE_ORIGIN}
 
 images:
   - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/api:$SHORT_SHA
