@@ -13,6 +13,7 @@ substitutions:
   _DB_NAME: ""
   _RAILS_MASTER_KEY: ""
   _FE_ORIGIN: ""
+  _REDIS_HOST: ""
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -80,8 +81,24 @@ steps:
       - --quiet
       - --port=3000
       - --vpc-connector=${_VPC_CONNECTOR}
-      - --set-env-vars=RAILS_ENV=staging,DB_HOST=${_DB_HOST},DB_USERNAME=${_DB_USERNAME},DB_PASSWORD=${_DB_PASSWORD},DB_NAME=${_DB_NAME},RAILS_MASTER_KEY=${_RAILS_MASTER_KEY},FE_ORIGIN=${_FE_ORIGIN}
+      - --set-env-vars=RAILS_ENV=staging,DB_HOST=${_DB_HOST},DB_USERNAME=${_DB_USERNAME},DB_PASSWORD=${_DB_PASSWORD},DB_NAME=${_DB_NAME},RAILS_MASTER_KEY=${_RAILS_MASTER_KEY},FE_ORIGIN=${_FE_ORIGIN},REDIS_HOST=${_REDIS_HOST}
       - --command=bundle,exec,puma,-C,config/puma.rb
+
+  - id: cleanup-revisions
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        gcloud run revisions list \
+          --service=${_CLOUD_RUN_SERVICE} \
+          --region=${_REGION} \
+          --format="value(REVISION)" \
+          --sort-by=~creationTimestamp | tail -n +3 | while read -r rev; do
+            echo "Deleting old revision: $${rev}"
+            gcloud run revisions delete "$${rev}" --region=${_REGION} --quiet || true
+          done
 
 images:
   - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/api:$SHORT_SHA
