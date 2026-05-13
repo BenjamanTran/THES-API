@@ -57,7 +57,7 @@ module Api
       private
 
       def set_game
-        @game = Game.includes(:host, :users).find(params[:id])
+        @game = Game.includes(:host, users: :rank).find(params[:id])
       rescue ActiveRecord::RecordNotFound
         render json: { error: 'Game not found' }, status: :not_found
       end
@@ -79,7 +79,7 @@ module Api
       def filtered_games
         scope = base_filtered_scope
         scope = mine_scope(scope) if mine_filter?
-        scope.includes(:host).order(start_time: order_direction)
+        scope.includes(:host, users: :rank).order(start_time: order_direction)
       end
 
       def base_filtered_scope
@@ -126,6 +126,7 @@ module Api
                           :min_price, :max_price)
         item[:host] = { id: game.host&.id, name: game.host&.name }
         item[:fit_level] = game.fit_level(@current_user) if @current_user
+        item[:participants_summary] = participants_summary(game)
         item
       end
 
@@ -135,9 +136,21 @@ module Api
                             :description, :min_tier, :max_tier, :courts,
                             :min_price, :max_price)
         detail[:host] = { id: game.host&.id, name: game.host&.name }
-        detail[:players] = game.users.map { |u| { id: u.id, name: u.name } }
+        detail[:players] = game.users.map { |u| player_payload(u) }
         detail[:fit_level] = game.fit_level(@current_user) if @current_user
         detail
+      end
+
+      def player_payload(user)
+        payload = { id: user.id, name: user.name, gender: user.gender }
+        payload[:rank] = rank_payload(user.rank) if user.rank
+        payload
+      end
+
+      def participants_summary(game)
+        game.users.map do |u|
+          { gender: u.gender, tier: u.rank&.tier }
+        end
       end
     end
   end
