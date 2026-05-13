@@ -24,8 +24,8 @@ RSpec.configure do |config|
       paths: {},
       servers: [
         {
-          url: 'http://localhost:3000',
-          description: 'Local development'
+          url: ENV.fetch('SWAGGER_HOST', 'http://localhost:3000'),
+          description: Rails.env
         }
       ]
     }
