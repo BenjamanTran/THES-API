@@ -5,6 +5,7 @@ class Game < ApplicationRecord
 
   has_many :game_participations, dependent: :destroy
   has_many :users, through: :game_participations
+  has_many :matches, dependent: :destroy
   belongs_to :host, class_name: 'User', optional: true
 
   TIERS = Rank.tiers

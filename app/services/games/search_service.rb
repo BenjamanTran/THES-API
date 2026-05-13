@@ -23,7 +23,7 @@ module Games
     def search_elasticsearch
       response = Game.__elasticsearch__.search(@query_builder.build)
       ids = response.results.map { |r| r._id.to_i }
-      games_by_id = Game.includes(:host, users: :rank).where(id: ids).index_by(&:id)
+      games_by_id = Game.includes(:host, :matches).where(id: ids).index_by(&:id)
 
       response.results.filter_map { |r| build_result(r, games_by_id[r._id.to_i]) }
     end
@@ -38,7 +38,8 @@ module Games
       item[:host] = { id: game.host&.id, name: game.host&.name }
       item[:distance_km] = distance_km(result) if @query_builder.location_provided?
       item[:fit_level] = compute_fit_level(source) if @user&.rank
-      item[:participants_summary] = game.users.map { |u| { gender: u.gender, tier: u.rank&.tier } }
+      item[:matches_count] = game.matches.size
+      item[:matches_finished] = game.matches.count(&:finished?)
       item
     end
 
@@ -68,7 +69,7 @@ module Games
     end
 
     def fallback_query
-      scope = Game.includes(:host, users: :rank)
+      scope = Game.includes(:host, :matches)
                   .where(end_time: Time.current..)
                   .where.not(status: :cancelled)
 
@@ -192,7 +193,8 @@ module Games
       item[:host] = { id: game.host&.id, name: game.host&.name }
       item[:fit_level] = game.fit_level(@user) if @user
       item[:distance_km] = game.try(:distance_km)&.to_f&.round(2) if @query_builder.location_provided?
-      item[:participants_summary] = game.users.map { |u| { gender: u.gender, tier: u.rank&.tier } }
+      item[:matches_count] = game.matches.size
+      item[:matches_finished] = game.matches.count(&:finished?)
       item
     end
 

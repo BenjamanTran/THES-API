@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_11_160001) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_13_161132) do
   create_table "game_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "game_id", null: false
@@ -37,7 +37,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_11_160001) do
     t.integer "match_type", default: 0, null: false
     t.integer "max_players", default: 2, null: false
     t.integer "max_price", default: 0, null: false
-    t.integer "max_tier", default: 5, null: false
+    t.integer "max_tier", default: 0, null: false
     t.integer "min_price", default: 0, null: false
     t.integer "min_tier", default: 0, null: false
     t.integer "players_count", default: 0, null: false
@@ -49,6 +49,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_11_160001) do
     t.index ["min_tier", "max_tier"], name: "index_games_on_min_tier_and_max_tier"
     t.index ["start_time"], name: "index_games_on_start_time"
     t.index ["status"], name: "index_games_on_status"
+  end
+
+  create_table "match_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "match_id", null: false
+    t.integer "team", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.boolean "winner", default: false
+    t.index ["match_id", "user_id"], name: "index_match_participations_on_match_id_and_user_id", unique: true
+    t.index ["match_id"], name: "index_match_participations_on_match_id"
+    t.index ["user_id"], name: "index_match_participations_on_user_id"
+  end
+
+  create_table "matches", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "finished_at"
+    t.bigint "game_id", null: false
+    t.integer "match_number", default: 1, null: false
+    t.datetime "started_at"
+    t.integer "status", default: 0, null: false
+    t.integer "team_a_score"
+    t.integer "team_b_score"
+    t.datetime "updated_at", null: false
+    t.string "winner_team"
+    t.index ["game_id", "match_number"], name: "index_matches_on_game_id_and_match_number", unique: true
+    t.index ["game_id"], name: "index_matches_on_game_id"
   end
 
   create_table "ranks", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -93,6 +120,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_11_160001) do
   add_foreign_key "game_participations", "games"
   add_foreign_key "game_participations", "users"
   add_foreign_key "games", "users", column: "host_id"
+  add_foreign_key "match_participations", "matches"
+  add_foreign_key "match_participations", "users"
+  add_foreign_key "matches", "games"
   add_foreign_key "ranks", "users"
   add_foreign_key "user_skills", "users"
 end

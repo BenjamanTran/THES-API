@@ -57,7 +57,8 @@ module Api
       private
 
       def set_game
-        @game = Game.includes(:host, users: :rank).find(params[:id])
+        @game = Game.includes(:host, game_participations: { user: :rank },
+                              matches: { match_participations: { user: :rank } }).find(params[:id])
       rescue ActiveRecord::RecordNotFound
         render json: { error: 'Game not found' }, status: :not_found
       end
@@ -79,7 +80,7 @@ module Api
       def filtered_games
         scope = base_filtered_scope
         scope = mine_scope(scope) if mine_filter?
-        scope.includes(:host, users: :rank).order(start_time: order_direction)
+        scope.includes(:host, :matches).order(start_time: order_direction)
       end
 
       def base_filtered_scope
@@ -126,7 +127,8 @@ module Api
                           :min_price, :max_price)
         item[:host] = { id: game.host&.id, name: game.host&.name }
         item[:fit_level] = game.fit_level(@current_user) if @current_user
-        item[:participants_summary] = participants_summary(game)
+        item[:matches_count] = game.matches.size
+        item[:matches_finished] = game.matches.count(&:finished?)
         item
       end
 
@@ -136,22 +138,32 @@ module Api
                             :description, :min_tier, :max_tier, :courts,
                             :min_price, :max_price)
         detail[:host] = { id: game.host&.id, name: game.host&.name }
-        detail[:players] = game.users.map { |u| player_payload(u) }
+        detail[:players] = game.game_participations.map { |gp| player_payload(gp) }
         detail[:fit_level] = game.fit_level(@current_user) if @current_user
+        detail[:matches] = game.matches.sort_by(&:match_number).map { |m| match_summary(m) }
         detail
       end
 
-      def player_payload(user)
+      def match_summary(match)
+        {
+          id: match.id,
+          match_number: match.match_number,
+          status: match.status,
+          team_a_score: match.team_a_score,
+          team_b_score: match.team_b_score,
+          winner_team: match.winner_team,
+          team_a: match.match_participations.select(&:team_a?).map { |mp| { id: mp.user_id, name: mp.user.name } },
+          team_b: match.match_participations.select(&:team_b?).map { |mp| { id: mp.user_id, name: mp.user.name } }
+        }
+      end
+
+      def player_payload(participation)
+        user = participation.user
         payload = { id: user.id, name: user.name, gender: user.gender }
         payload[:rank] = rank_payload(user.rank) if user.rank
         payload
       end
 
-      def participants_summary(game)
-        game.users.map do |u|
-          { gender: u.gender, tier: u.rank&.tier }
-        end
-      end
     end
   end
 end

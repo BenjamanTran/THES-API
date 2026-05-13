@@ -25,6 +25,12 @@ Rails.application.routes.draw do
           post :join
           post :leave
         end
+
+        resources :matches, only: %i[index create], controller: 'matches' do
+          member do
+            post :finish
+          end
+        end
       end
     end
   end
