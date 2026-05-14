@@ -54,7 +54,9 @@ Rails.application.routes.draw do
       sidekiq_running: ps.size > 0,
       processes: ps.size,
       cron_jobs: cron_jobs.map { |j| { name: j.name, cron: j.cron, last_enqueue: j.last_enqueue_time&.iso8601, status: j.status } },
-      redis: Sidekiq.redis { |c| c.ping } == "PONG"
+      redis: Sidekiq.redis { |c| c.ping } == "PONG",
+      fe_origin: ENV['FE_ORIGIN'],
+      rails_env: ENV['RAILS_ENV']
     }
     [200, { "Content-Type" => "application/json" }, [body.to_json]]
   }
