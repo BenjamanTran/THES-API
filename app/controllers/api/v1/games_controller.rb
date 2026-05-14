@@ -32,7 +32,10 @@ module Api
 
         result = service.create
         if result.success?
-          render json: game_list_item(result.data[:game]), status: :created
+          game = result.data[:game]
+          payload = game_list_item(game)
+          payload[:invite_code] = game.invite_code
+          render json: payload, status: :created
         else
           render json: { errors: result.error }, status: :unprocessable_content
         end

@@ -45,4 +45,17 @@ Rails.application.routes.draw do
   end
 
   get 'up' => 'rails/health#show', as: :rails_health_check
+
+  get 'sidekiq-health' => ->(env) {
+    require 'sidekiq/api'
+    ps = Sidekiq::ProcessSet.new
+    cron_jobs = Sidekiq::Cron::Job.all
+    body = {
+      sidekiq_running: ps.size > 0,
+      processes: ps.size,
+      cron_jobs: cron_jobs.map { |j| { name: j.name, cron: j.cron, last_enqueue: j.last_enqueue_time&.iso8601, status: j.status } },
+      redis: Sidekiq.redis { |c| c.ping } == "PONG"
+    }
+    [200, { "Content-Type" => "application/json" }, [body.to_json]]
+  }
 end
