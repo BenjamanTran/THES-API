@@ -82,8 +82,10 @@ module Games
     end
 
     def clamped_radius
-      radius = @params[:radius].presence || DEFAULT_RADIUS
-      radius.to_f > MAX_RADIUS.to_f ? MAX_RADIUS : radius
+      raw = @params[:radius].presence || DEFAULT_RADIUS
+      km = raw.to_s.gsub(/km$/i, '').to_f
+      km = km.positive? ? [km, MAX_RADIUS.to_f].min : DEFAULT_RADIUS.to_f
+      "#{km.to_i}km"
     end
 
     def page_size

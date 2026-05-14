@@ -34,7 +34,7 @@ module Games
       source = result._source
       item = game.slice(:id, :start_time, :end_time, :status, :match_type,
                         :players_count, :max_players, :lat, :lng, :location,
-                        :description, :min_tier, :max_tier)
+                        :description, :title, :min_tier, :max_tier)
       item[:host] = { id: game.host&.id, name: game.host&.name }
       item[:distance_km] = distance_km(result) if @query_builder.location_provided?
       item[:fit_level] = compute_fit_level(source) if @user&.rank
@@ -70,7 +70,7 @@ module Games
     end
 
     def fallback_query
-      scope = Game.includes(:host, :matches)
+      scope = Game.includes(:host)
                   .where(end_time: Time.current..)
                   .where.not(status: :cancelled)
 
@@ -125,7 +125,12 @@ module Games
       case @params[:sort].to_s
       when 'start_time_asc' then scope.order(start_time: :asc)
       when 'created_at_asc' then scope.order(created_at: :asc)
-      else scope.order(created_at: :desc)
+      else
+        if @query_builder.location_provided?
+          scope.order(Arel.sql('distance_km ASC'))
+        else
+          scope.order(created_at: :desc)
+        end
       end
     end
 
@@ -189,14 +194,13 @@ module Games
     def fallback_item(game)
       item = game.slice(:id, :start_time, :end_time, :status, :match_type,
                         :players_count, :max_players, :lat, :lng, :location,
-                        :description, :min_tier, :max_tier,
+                        :description, :title, :min_tier, :max_tier,
                         :min_price, :max_price)
       item[:host] = { id: game.host&.id, name: game.host&.name }
       item[:fit_level] = game.fit_level(@user) if @user
       item[:distance_km] = game.try(:distance_km)&.to_f&.round(2) if @query_builder.location_provided?
-      loaded_m = game.matches.loaded? ? game.matches : game.matches.load
-      item[:matches_count] = loaded_m.length
-      item[:matches_finished] = loaded_m.count(&:finished?)
+      item[:matches_count] = game.matches_count
+      item[:matches_finished] = game.matches_count.positive? ? game.matches.where(status: :finished).count : 0
       item
     end
 

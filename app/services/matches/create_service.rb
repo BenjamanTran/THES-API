@@ -27,8 +27,7 @@ module Matches
       ActiveRecord::Base.transaction do
         match = @game.matches.create!(
           match_number: next_number,
-          status: :ongoing,
-          started_at: Time.current
+          status: :pending
         )
 
         @team_a_ids.each { |uid| match.match_participations.create!(user_id: uid, team: :team_a) }

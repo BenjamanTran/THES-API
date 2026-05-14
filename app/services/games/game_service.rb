@@ -18,7 +18,7 @@ module Games
       if game.venue_id.present? && (venue = Venue.find_by(id: game.venue_id))
         game.lat ||= venue.lat
         game.lng ||= venue.lng
-        game.location ||= venue.name
+        game.location ||= [venue.name, venue.address].compact_blank.join(' - ')
       end
 
       ActiveRecord::Base.transaction do

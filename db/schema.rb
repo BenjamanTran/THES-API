@@ -10,10 +10,13 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_14_070001) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_14_150700) do
   create_table "game_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "game_id", null: false
+    t.integer "host_rated_stars"
+    t.integer "host_rated_tier"
+    t.string "host_rating_note", limit: 200
     t.string "position"
     t.integer "role", default: 0, null: false
     t.integer "score"
@@ -37,6 +40,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_14_070001) do
     t.decimal "lng", precision: 10, scale: 7
     t.string "location"
     t.integer "match_type", default: 0, null: false
+    t.integer "matches_count", default: 0, null: false
     t.integer "max_players", default: 2, null: false
     t.integer "max_price", default: 0, null: false
     t.integer "max_tier", default: 0, null: false
@@ -45,6 +49,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_14_070001) do
     t.integer "players_count", default: 0, null: false
     t.datetime "start_time"
     t.integer "status", default: 0, null: false
+    t.string "title", limit: 100
     t.datetime "updated_at", null: false
     t.bigint "venue_id"
     t.index ["host_id"], name: "index_games_on_host_id"

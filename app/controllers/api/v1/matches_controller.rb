@@ -4,7 +4,7 @@ module Api
   module V1
     class MatchesController < BaseController
       before_action :set_game
-      before_action :set_match, only: %i[finish destroy]
+      before_action :set_match, only: %i[start finish destroy]
 
       def index
         matches = @game.matches.includes(match_participations: { user: :rank }).ordered
@@ -18,6 +18,18 @@ module Api
         else
           render json: { error: result.error }, status: result.status
         end
+      end
+
+      def start
+        unless @game.host_or_co_host?(@current_user)
+          return render json: { error: 'Only host or co-host can start matches' }, status: :forbidden
+        end
+        unless @match.pending?
+          return render json: { error: 'Match already started' }, status: :unprocessable_content
+        end
+
+        @match.update!(status: :ongoing, started_at: Time.current)
+        render json: match_payload(@match)
       end
 
       def finish

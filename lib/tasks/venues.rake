@@ -49,10 +49,15 @@ namespace :venues do
           address = props['full_address'] || props['address'] || ''
           lng, lat = coords
 
+          next if shop_name?(name)
+
           context = props['context'] || {}
-          district = context.dig('district', 'name') ||
-                     context.dig('neighborhood', 'name') ||
-                     extract_district(address)
+          district = extract_quan(address) ||
+                     context.dig('locality', 'name') ||
+                     context.dig('place', 'name')
+          ward = context.dig('district', 'name') ||
+                 context.dig('neighborhood', 'name')
+          full_district = [district, ward].compact.reject(&:empty?).join(', ')
 
           city = detect_city(address, region[:name])
 
@@ -60,7 +65,7 @@ namespace :venues do
             name: name,
             address: address.presence,
             city: city,
-            district: district,
+            district: full_district.presence,
             lat: lat,
             lng: lng,
             mapbox_id: mapbox_id,
@@ -142,7 +147,22 @@ def detect_city(address, fallback)
   fallback
 end
 
-def extract_district(address)
+def extract_quan(address)
   match = address.match(/(?:qu[aậ]n|q\.?)\s*([^,]+)/i)
-  match ? match[1].strip : nil
+  return match[1].strip if match
+
+  match = address.match(/(thành phố thủ đức|tp\.?\s*thủ đức)/i)
+  return 'Thủ Đức' if match
+
+  nil
+end
+
+SHOP_KEYWORDS = %w[
+  shop cửa\ hàng văn\ phòng vợt store bán phân\ phối
+  đại\ lý agency outlet retail phụ\ kiện
+].freeze
+
+def shop_name?(name)
+  down = name.downcase
+  SHOP_KEYWORDS.any? { |kw| down.include?(kw) }
 end

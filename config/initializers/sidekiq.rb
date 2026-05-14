@@ -18,6 +18,11 @@ Sidekiq.configure_server do |config|
         'cron' => '*/50 * * * *',
         'class' => 'Games::UpdateStatusesJob',
         'description' => 'Transition game statuses based on time (open/full -> ongoing -> finished)'
+      },
+      'cleanup_expired_guests' => {
+        'cron' => '0 3 * * *',
+        'class' => 'Users::CleanupGuestsJob',
+        'description' => 'Delete guest accounts older than 30 days and all related data'
       }
     }
 

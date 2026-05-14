@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Match < ApplicationRecord
-  belongs_to :game
+  belongs_to :game, counter_cache: true
   has_many :match_participations, dependent: :destroy
   has_many :users, through: :match_participations
 

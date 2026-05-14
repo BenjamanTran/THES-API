@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+bundle exec sidekiq &
+SIDEKIQ_PID=$!
+
+exec ./bin/thrust ./bin/rails server
+
+wait $SIDEKIQ_PID

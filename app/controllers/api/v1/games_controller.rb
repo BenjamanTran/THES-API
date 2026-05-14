@@ -5,7 +5,7 @@ module Api
     class GamesController < BaseController
       skip_before_action :set_current_user, only: %i[index show search]
       before_action :set_current_user_optional, only: %i[index show search]
-      before_action :set_game, only: %i[show join leave promote kick]
+      before_action :set_game, only: %i[show join leave promote kick rate_player]
 
       MAX_PER_PAGE = 50
       DEFAULT_PER_PAGE = 20
@@ -96,6 +96,28 @@ module Api
         render json: { status: 'kicked', user_id: params[:user_id].to_i }
       end
 
+      def rate_player
+        unless @game.host_or_co_host?(@current_user)
+          return render json: { error: 'Only host or co-host can rate players' }, status: :forbidden
+        end
+
+        gp = @game.game_participations.find_by(user_id: params[:user_id])
+        return render json: { error: 'Player not found in this game' }, status: :not_found unless gp
+
+        tier_key = GameParticipation::HOST_TIER_MAP[params[:tier]]
+        return render json: { error: 'Invalid tier' }, status: :unprocessable_content unless tier_key
+
+        gp.update!(
+          host_rated_tier: tier_key,
+          host_rated_stars: params[:stars].to_i,
+          host_rating_note: params[:note].presence
+        )
+
+        render json: player_payload(gp.reload)
+      rescue ActiveRecord::RecordInvalid => e
+        render json: { error: e.record.errors.full_messages.join(', ') }, status: :unprocessable_content
+      end
+
       private
 
       def set_game
@@ -111,7 +133,7 @@ module Api
 
       def game_params
         params.permit(:start_time, :end_time, :lat, :lng, :match_type, :min_tier, :max_tier,
-                      :max_players, :description, :min_price, :max_price, :venue_id, courts: [])
+                      :max_players, :description, :title, :min_price, :max_price, :venue_id, courts: [])
       end
 
       def search_params
@@ -122,7 +144,7 @@ module Api
       def filtered_games
         scope = base_filtered_scope
         scope = mine_scope(scope) if mine_filter?
-        scope.includes(:host, :matches).order(start_time: order_direction)
+        scope.includes(:host).order(start_time: order_direction)
       end
 
       def base_filtered_scope
@@ -165,20 +187,19 @@ module Api
       def game_list_item(game)
         item = game.slice(:id, :start_time, :end_time, :status, :match_type,
                           :players_count, :max_players, :lat, :lng, :location,
-                          :description, :min_tier, :max_tier, :courts,
+                          :description, :title, :min_tier, :max_tier, :courts,
                           :min_price, :max_price)
         item[:host] = { id: game.host&.id, name: game.host&.name }
         item[:fit_level] = game.fit_level(@current_user) if @current_user
-        loaded = game.matches.loaded? ? game.matches : game.matches.load
-        item[:matches_count] = loaded.length
-        item[:matches_finished] = loaded.count(&:finished?)
+        item[:matches_count] = game.matches_count
+        item[:matches_finished] = game.matches_count.positive? ? game.matches.where(status: :finished).count : 0
         item
       end
 
       def game_detail(game)
         detail = game.slice(:id, :start_time, :end_time, :status, :match_type,
                             :players_count, :max_players, :lat, :lng, :location,
-                            :description, :min_tier, :max_tier, :courts,
+                            :description, :title, :min_tier, :max_tier, :courts,
                             :min_price, :max_price, :invite_code)
         detail[:host] = { id: game.host&.id, name: game.host&.name }
         detail[:players] = game.game_participations.map { |gp| player_payload(gp) }
@@ -195,15 +216,27 @@ module Api
           team_a_score: match.team_a_score,
           team_b_score: match.team_b_score,
           winner_team: match.winner_team,
-          team_a: match.match_participations.select(&:team_a?).map { |mp| { id: mp.user_id, name: mp.user.name } },
-          team_b: match.match_participations.select(&:team_b?).map { |mp| { id: mp.user_id, name: mp.user.name } }
+          team_a: match.match_participations.select(&:team_a?).map { |mp| match_player(mp) },
+          team_b: match.match_participations.select(&:team_b?).map { |mp| match_player(mp) }
         }
+      end
+
+      def match_player(mp)
+        user = mp.user
+        entry = { id: user.id, name: user.name }
+        entry[:rank] = rank_payload(user.rank) if user.rank
+        entry
       end
 
       def player_payload(participation)
         user = participation.user
         payload = { id: user.id, name: user.name, gender: user.gender, role: participation.role }
         payload[:rank] = rank_payload(user.rank) if user.rank
+        if participation.host_rated_tier.present?
+          payload[:host_rated_tier] = participation.host_rated_tier_key
+          payload[:host_rated_stars] = participation.host_rated_stars
+          payload[:host_rating_note] = participation.host_rating_note
+        end
         payload
       end
 

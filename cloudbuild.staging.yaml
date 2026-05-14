@@ -82,7 +82,7 @@ steps:
       - --port=3000
       - --vpc-connector=${_VPC_CONNECTOR}
       - --set-env-vars=RAILS_ENV=staging,DB_HOST=${_DB_HOST},DB_USERNAME=${_DB_USERNAME},DB_PASSWORD=${_DB_PASSWORD},DB_NAME=${_DB_NAME},RAILS_MASTER_KEY=${_RAILS_MASTER_KEY},FE_ORIGIN=${_FE_ORIGIN},REDIS_HOST=${_REDIS_HOST}
-      - --command=bundle,exec,puma,-C,config/puma.rb
+      - --command=./bin/start-with-sidekiq
 
   - id: cleanup-revisions
     name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim

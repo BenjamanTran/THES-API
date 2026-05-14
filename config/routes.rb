@@ -31,10 +31,12 @@ Rails.application.routes.draw do
           post :leave
           post :promote
           post :kick
+          patch :rate_player
         end
 
         resources :matches, only: %i[index create destroy], controller: 'matches' do
           member do
+            post :start
             post :finish
           end
         end
