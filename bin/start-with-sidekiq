@@ -1,26 +1,10 @@
 #!/bin/bash
 set -e
 
-echo "[start-with-sidekiq] Starting Sidekiq..."
+echo "[start] Starting Sidekiq..."
 bundle exec sidekiq &
 SIDEKIQ_PID=$!
-echo "[start-with-sidekiq] Sidekiq started (PID: $SIDEKIQ_PID)"
+echo "[start] Sidekiq PID: $SIDEKIQ_PID"
 
-cleanup() {
-  echo "[start-with-sidekiq] Shutting down Sidekiq (PID: $SIDEKIQ_PID)..."
-  kill -TERM "$SIDEKIQ_PID" 2>/dev/null
-  wait "$SIDEKIQ_PID" 2>/dev/null
-}
-trap cleanup SIGTERM SIGINT
-
-echo "[start-with-sidekiq] Starting Puma..."
-./bin/thrust ./bin/rails server &
-PUMA_PID=$!
-echo "[start-with-sidekiq] Puma started (PID: $PUMA_PID)"
-
-wait -n $SIDEKIQ_PID $PUMA_PID
-EXIT_CODE=$?
-echo "[start-with-sidekiq] A process exited with code $EXIT_CODE, shutting down..."
-kill -TERM $SIDEKIQ_PID $PUMA_PID 2>/dev/null
-wait
-exit $EXIT_CODE
+echo "[start] Starting Puma..."
+exec ./bin/thrust ./bin/rails server
