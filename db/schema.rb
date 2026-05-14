@@ -10,11 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_13_161132) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_14_070001) do
   create_table "game_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "game_id", null: false
     t.string "position"
+    t.integer "role", default: 0, null: false
     t.integer "score"
     t.integer "team", default: 0, null: false
     t.datetime "updated_at", null: false
@@ -31,6 +32,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_161132) do
     t.text "description"
     t.datetime "end_time"
     t.bigint "host_id"
+    t.string "invite_code", limit: 12
     t.decimal "lat", precision: 10, scale: 7
     t.decimal "lng", precision: 10, scale: 7
     t.string "location"
@@ -44,11 +46,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_161132) do
     t.datetime "start_time"
     t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.bigint "venue_id"
     t.index ["host_id"], name: "index_games_on_host_id"
+    t.index ["invite_code"], name: "index_games_on_invite_code", unique: true
     t.index ["min_price"], name: "index_games_on_min_price"
     t.index ["min_tier", "max_tier"], name: "index_games_on_min_tier_and_max_tier"
     t.index ["start_time"], name: "index_games_on_start_time"
     t.index ["status"], name: "index_games_on_status"
+    t.index ["venue_id"], name: "index_games_on_venue_id"
   end
 
   create_table "match_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -106,8 +111,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_161132) do
 
   create_table "users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.string "email", null: false
+    t.string "email"
     t.integer "gender", default: 0, null: false
+    t.boolean "guest", default: false, null: false
     t.string "name", null: false
     t.string "password_digest"
     t.string "phone"
@@ -117,12 +123,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_161132) do
     t.index ["session_token"], name: "index_users_on_session_token", unique: true
   end
 
+  create_table "venues", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "address"
+    t.string "city"
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.string "district"
+    t.decimal "lat", precision: 10, scale: 7
+    t.decimal "lng", precision: 10, scale: 7
+    t.string "mapbox_id"
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "verified", default: false, null: false
+    t.index ["city"], name: "index_venues_on_city"
+    t.index ["created_by_id"], name: "index_venues_on_created_by_id"
+    t.index ["lat", "lng"], name: "index_venues_on_lat_and_lng"
+    t.index ["mapbox_id"], name: "index_venues_on_mapbox_id", unique: true
+  end
+
   add_foreign_key "game_participations", "games"
   add_foreign_key "game_participations", "users"
   add_foreign_key "games", "users", column: "host_id"
+  add_foreign_key "games", "venues"
   add_foreign_key "match_participations", "matches"
   add_foreign_key "match_participations", "users"
   add_foreign_key "matches", "games"
   add_foreign_key "ranks", "users"
   add_foreign_key "user_skills", "users"
+  add_foreign_key "venues", "users", column: "created_by_id"
 end

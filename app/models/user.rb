@@ -15,8 +15,10 @@ class User < ApplicationRecord
 
   before_validation :normalize_email
 
+  scope :guests, -> { where(guest: true) }
+
   validates :name, presence: true, length: { maximum: 80 }
-  validates :email, presence: true, uniqueness: { case_sensitive: false }, format: { with: EMAIL_REGEX }
+  validates :email, presence: true, uniqueness: { case_sensitive: false }, format: { with: EMAIL_REGEX }, unless: :guest?
   validates :password, length: { minimum: 8 }, allow_nil: true, if: -> { password_digest_changed? }
   validates :phone, format: { with: PHONE_REGEX }, allow_blank: true
 

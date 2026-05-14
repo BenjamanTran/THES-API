@@ -10,7 +10,7 @@ module Matches
     end
 
     def call
-      return failure('Only the host can create matches', :forbidden) unless @game.host_id == @user.id
+      return failure('Only the host can create matches', :forbidden) unless @game.host_or_co_host?(@user)
       return failure('Game must be ongoing or full') unless @game.ongoing? || @game.full?
 
       all_ids = @team_a_ids + @team_b_ids

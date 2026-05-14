@@ -5,7 +5,7 @@ module Api
     class GamesController < BaseController
       skip_before_action :set_current_user, only: %i[index show search]
       before_action :set_current_user_optional, only: %i[index show search]
-      before_action :set_game, only: %i[show join leave]
+      before_action :set_game, only: %i[show join leave promote kick]
 
       MAX_PER_PAGE = 50
       DEFAULT_PER_PAGE = 20
@@ -26,6 +26,10 @@ module Api
       end
 
       def create
+        if @current_user.guest?
+          return render json: { errors: ['Tài khoản khách không thể tạo trận'] }, status: :forbidden
+        end
+
         result = service.create
         if result.success?
           render json: game_list_item(result.data[:game]), status: :created
@@ -54,6 +58,44 @@ module Api
         end
       end
 
+      def promote
+        return render json: { error: 'Only the host can manage co-hosts' }, status: :forbidden unless @game.host_id == @current_user.id
+
+        gp = @game.game_participations.find_by(user_id: params[:user_id])
+        return render json: { error: 'Player not found in this game' }, status: :not_found unless gp
+        return render json: { error: 'Cannot promote the host' }, status: :unprocessable_entity if gp.user_id == @game.host_id
+
+        new_role = gp.co_host? ? :player : :co_host
+        gp.role = new_role
+        if gp.save
+          render json: { user_id: gp.user_id, role: gp.role }
+        else
+          render json: { error: gp.errors.full_messages.join(', ') }, status: :unprocessable_entity
+        end
+      end
+
+      def kick
+        unless @game.host_or_co_host?(@current_user)
+          return render json: { error: 'Only host or co-hosts can kick players' }, status: :forbidden
+        end
+
+        gp = @game.game_participations.find_by(user_id: params[:user_id])
+        return render json: { error: 'Player not found in this game' }, status: :not_found unless gp
+        return render json: { error: 'Cannot kick the host' }, status: :unprocessable_entity if gp.user_id == @game.host_id
+
+        if gp.co_host? && @game.host_id != @current_user.id
+          return render json: { error: 'Only the host can kick co-hosts' }, status: :forbidden
+        end
+
+        ActiveRecord::Base.transaction do
+          gp.destroy!
+          @game.update!(players_count: @game.players_count - 1)
+          @game.update!(status: :open) if @game.full?
+        end
+
+        render json: { status: 'kicked', user_id: params[:user_id].to_i }
+      end
+
       private
 
       def set_game
@@ -69,7 +111,7 @@ module Api
 
       def game_params
         params.permit(:start_time, :end_time, :lat, :lng, :match_type, :min_tier, :max_tier,
-                      :max_players, :description, :min_price, :max_price, courts: [])
+                      :max_players, :description, :min_price, :max_price, :venue_id, courts: [])
       end
 
       def search_params
@@ -127,8 +169,9 @@ module Api
                           :min_price, :max_price)
         item[:host] = { id: game.host&.id, name: game.host&.name }
         item[:fit_level] = game.fit_level(@current_user) if @current_user
-        item[:matches_count] = game.matches.size
-        item[:matches_finished] = game.matches.count(&:finished?)
+        loaded = game.matches.loaded? ? game.matches : game.matches.load
+        item[:matches_count] = loaded.length
+        item[:matches_finished] = loaded.count(&:finished?)
         item
       end
 
@@ -136,7 +179,7 @@ module Api
         detail = game.slice(:id, :start_time, :end_time, :status, :match_type,
                             :players_count, :max_players, :lat, :lng, :location,
                             :description, :min_tier, :max_tier, :courts,
-                            :min_price, :max_price)
+                            :min_price, :max_price, :invite_code)
         detail[:host] = { id: game.host&.id, name: game.host&.name }
         detail[:players] = game.game_participations.map { |gp| player_payload(gp) }
         detail[:fit_level] = game.fit_level(@current_user) if @current_user
@@ -159,7 +202,7 @@ module Api
 
       def player_payload(participation)
         user = participation.user
-        payload = { id: user.id, name: user.name, gender: user.gender }
+        payload = { id: user.id, name: user.name, gender: user.gender, role: participation.role }
         payload[:rank] = rank_payload(user.rank) if user.rank
         payload
       end

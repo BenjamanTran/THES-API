@@ -38,8 +38,9 @@ module Games
       item[:host] = { id: game.host&.id, name: game.host&.name }
       item[:distance_km] = distance_km(result) if @query_builder.location_provided?
       item[:fit_level] = compute_fit_level(source) if @user&.rank
-      item[:matches_count] = game.matches.size
-      item[:matches_finished] = game.matches.count(&:finished?)
+      loaded_m = game.matches.loaded? ? game.matches : game.matches.load
+      item[:matches_count] = loaded_m.length
+      item[:matches_finished] = loaded_m.count(&:finished?)
       item
     end
 
@@ -193,8 +194,9 @@ module Games
       item[:host] = { id: game.host&.id, name: game.host&.name }
       item[:fit_level] = game.fit_level(@user) if @user
       item[:distance_km] = game.try(:distance_km)&.to_f&.round(2) if @query_builder.location_provided?
-      item[:matches_count] = game.matches.size
-      item[:matches_finished] = game.matches.count(&:finished?)
+      loaded_m = game.matches.loaded? ? game.matches : game.matches.load
+      item[:matches_count] = loaded_m.length
+      item[:matches_finished] = loaded_m.count(&:finished?)
       item
     end
 

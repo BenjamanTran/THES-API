@@ -4,7 +4,7 @@ module Api
   module V1
     class MatchesController < BaseController
       before_action :set_game
-      before_action :set_match, only: :finish
+      before_action :set_match, only: %i[finish destroy]
 
       def index
         matches = @game.matches.includes(match_participations: { user: :rank }).ordered
@@ -32,10 +32,22 @@ module Api
         end
       end
 
+      def destroy
+        unless @game.host_or_co_host?(@current_user)
+          return render json: { error: 'Only the host can delete matches' }, status: :forbidden
+        end
+        if @match.finished?
+          return render json: { error: 'Cannot delete a finished match' }, status: :unprocessable_entity
+        end
+
+        @match.destroy!
+        render json: { message: 'Match deleted' }
+      end
+
       private
 
       def set_game
-        @game = Game.includes(:host).find(params[:game_id])
+        @game = Game.find(params[:game_id])
       rescue ActiveRecord::RecordNotFound
         render json: { error: 'Game not found' }, status: :not_found
       end

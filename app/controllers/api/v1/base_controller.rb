@@ -59,7 +59,7 @@ module Api
       end
 
       def user_payload(user)
-        user.slice(:id, :email, :name, :gender, :phone).merge(rank: rank_payload(user.rank))
+        user.slice(:id, :email, :name, :gender, :phone, :guest).merge(rank: rank_payload(user.rank))
       end
 
       def rank_payload(rank)

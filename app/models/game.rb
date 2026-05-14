@@ -7,6 +7,7 @@ class Game < ApplicationRecord
   has_many :users, through: :game_participations
   has_many :matches, dependent: :destroy
   belongs_to :host, class_name: 'User', optional: true
+  belongs_to :venue, optional: true
 
   TIERS = Rank.tiers
 
@@ -33,6 +34,8 @@ class Game < ApplicationRecord
       .distinct
   }
 
+  before_create :generate_invite_code
+
   validates :status, presence: true
   validates :match_type, presence: true
   validates :start_time, presence: true
@@ -43,6 +46,10 @@ class Game < ApplicationRecord
   validate :tier_range_valid
   validate :time_range_valid
   validate :price_range_valid
+
+  def host_or_co_host?(user)
+    host_id == user.id || game_participations.exists?(user_id: user.id, role: :co_host)
+  end
 
   def fit_level(user)
     return unless user&.rank
@@ -85,4 +92,10 @@ class Game < ApplicationRecord
     errors.add(:min_price, 'must be less than or equal to max_price')
   end
 
+  def generate_invite_code
+    self.invite_code ||= loop do
+      code = SecureRandom.alphanumeric(8).downcase
+      break code unless Game.exists?(invite_code: code)
+    end
+  end
 end

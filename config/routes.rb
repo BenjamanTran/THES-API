@@ -17,6 +17,11 @@ Rails.application.routes.draw do
       patch  '/me',      to: 'profile#update'
       put    '/me',      to: 'profile#update'
 
+      resources :venues, only: %i[index create]
+
+      get  '/games/invite/:code', to: 'invites#show'
+      post '/games/invite/:code/join', to: 'invites#join'
+
       resources :games, only: %i[index show create] do
         collection do
           get :search
@@ -24,9 +29,11 @@ Rails.application.routes.draw do
         member do
           post :join
           post :leave
+          post :promote
+          post :kick
         end
 
-        resources :matches, only: %i[index create], controller: 'matches' do
+        resources :matches, only: %i[index create destroy], controller: 'matches' do
           member do
             post :finish
           end

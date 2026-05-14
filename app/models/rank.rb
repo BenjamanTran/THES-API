@@ -41,6 +41,19 @@ class Rank < ApplicationRecord
     RATING_TIERS.find { |range, _| range.cover?(rating) }&.last || :newbie
   end
 
+  TIER_RANGES = {
+    newbie: [0, 399], beginner_plus: [400, 799], lower_intermediate: [800, 1199],
+    intermediate: [1200, 1499], upper_intermediate: [1500, 1799], advanced: [1800, 2099],
+    semi_pro: [2100, 2399], professional: [2400, 2800]
+  }.freeze
+
+  def self.rating_from_tier_and_stars(tier_key, stars)
+    stars = [[stars.to_i, 1].max, 5].min
+    bounds = TIER_RANGES[tier_key.to_sym] || [0, 399]
+    low, high = bounds
+    low + ((stars - 1) * (high - low) / 4.0).round
+  end
+
   private
 
   def roman(number)

@@ -20,6 +20,14 @@ module Api
       def user_params
         permitted = params.permit(:name, :gender, :phone)
         permitted.delete(:phone) unless params.key?(:phone)
+
+        if @current_user.guest? && params[:email].present? && params[:password].present?
+          permitted[:email] = params[:email]
+          permitted[:password] = params[:password]
+          permitted[:password_confirmation] = params[:password_confirmation]
+          permitted[:guest] = false
+        end
+
         permitted
       end
 

@@ -15,6 +15,12 @@ module Games
       game.status = :open
       game.players_count = 1
 
+      if game.venue_id.present? && (venue = Venue.find_by(id: game.venue_id))
+        game.lat ||= venue.lat
+        game.lng ||= venue.lng
+        game.location ||= venue.name
+      end
+
       ActiveRecord::Base.transaction do
         game.save!
         game.game_participations.create!(user: @user, team: :team_a)

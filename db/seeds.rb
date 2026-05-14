@@ -38,8 +38,8 @@ players.each do |p|
 end
 
 # Admin / owner account
-User.find_or_create_by!(email: 't16021999@gmail.com') do |u|
-  u.name = 'Tân'
+admin = User.find_or_create_by!(email: 't16021999@gmail.com') do |u|
+  u.name = 'Tân Admin'
   u.gender = :male
   u.password_digest = BCrypt::Password.create('123123123')
 end
@@ -82,6 +82,7 @@ rank_data = {
   u14 => { tier: :beginner_plus,       rating: 700,  wins: 10, losses: 28 },
   u15 => { tier: :upper_intermediate,  rating: 1650, wins: 32, losses: 12 },
   u16 => { tier: :lower_intermediate,  rating: 900,  wins: 14, losses: 24 },
+  admin => { tier: :advanced,          rating: 1900, wins: 50, losses: 10 },
 }
 
 rank_data.each do |user, data|
@@ -286,26 +287,26 @@ game_i = create_game(
 add_players(game_i, { u1 => :team_a, u5 => :team_b, u3 => :team_a, u7 => :team_b })
 puts "Game I: #{game_i.description} (id=#{game_i.id})"
 
-# ─── Game J: Doubles, ONGOING, 16 người, host=Tân ───
+# ─── Game J: Doubles, ONGOING, 16 người, host=admin (t16021999@gmail.com) ───
 game_j = create_game(
   description: '[TEST] 16 người - giải đấu lớn',
-  host: u1, match_type: :doubles, max_players: 16, status: :ongoing,
+  host: admin, match_type: :doubles, max_players: 16, status: :ongoing,
   start_time: now - 20.minutes, end_time: now + 3.hours,
   lat: 10.7626, lng: 106.6601, location: 'Galaxy Badminton Center',
   min_tier: :beginner_plus, max_tier: :advanced,
   courts: [1, 2, 3, 4], min_price: 40_000, max_price: 60_000, players_count: 0
 )
 add_players(game_j, {
-  u1 => :team_a, u2 => :team_b, u3 => :team_a, u4 => :team_b,
-  u5 => :team_a, u6 => :team_b, u7 => :team_a, u8 => :team_b,
-  u9 => :team_a, u10 => :team_b, u11 => :team_a, u12 => :team_b,
-  u13 => :team_a, u14 => :team_b, u15 => :team_a, u16 => :team_b,
+  admin => :team_a, u1 => :team_b, u2 => :team_a, u3 => :team_b,
+  u4 => :team_a, u5 => :team_b, u6 => :team_a, u7 => :team_b,
+  u8 => :team_a, u9 => :team_b, u10 => :team_a, u11 => :team_b,
+  u12 => :team_a, u13 => :team_b, u14 => :team_a, u15 => :team_b,
 })
 if game_j.matches.empty?
   m1 = game_j.matches.create!(match_number: 1, status: :finished,
     team_a_score: 21, team_b_score: 17, winner_team: 'team_a',
     started_at: now - 18.minutes, finished_at: now - 8.minutes)
-  m1.match_participations.create!(user: u1, team: :team_a, winner: true)
+  m1.match_participations.create!(user: admin, team: :team_a, winner: true)
   m1.match_participations.create!(user: u3, team: :team_a, winner: true)
   m1.match_participations.create!(user: u2, team: :team_b, winner: false)
   m1.match_participations.create!(user: u4, team: :team_b, winner: false)
@@ -335,8 +336,9 @@ puts "Games:       #{Game.count}"
 puts "Matches:     #{Match.count}"
 puts ''
 puts '=== Test Accounts ==='
-puts 'Email: player1@example.com  Pass: password123  (Tân - host Game A, B, F)'
-puts 'Email: player2@example.com  Pass: password123  (Minh - host Game C)'
+puts 'Email: t16021999@gmail.com   Pass: 123123123    (Tân Admin - host Game J 16 người)'
+puts 'Email: player1@example.com   Pass: password123   (Tân - host Game A, B, F, I)'
+puts 'Email: player2@example.com   Pass: password123   (Minh - host Game C)'
 puts ''
 puts '=== Test Games ==='
 puts "Game A (id=#{game_a.id}): Doubles ONGOING, 4 người, 2 matches (1 finished + 1 ongoing)"
@@ -347,11 +349,13 @@ puts "Game E (id=#{game_e.id}): Singles OPEN, chờ đối thủ → test join"
 puts "Game F (id=#{game_f.id}): Doubles FINISHED, 3 matches → test xem kết quả"
 puts "Game G (id=#{game_g.id}): Doubles OPEN, 2/4 → tìm trận"
 puts "Game H (id=#{game_h.id}): Singles OPEN, 1/2 → tìm trận"
-puts "Game I (id=#{game_i.id}): Doubles OPEN, 3/4 → tìm trận"
+puts "Game I (id=#{game_i.id}): Doubles ONGOING, 4/4 → tìm trận"
+puts "Game J (id=#{game_j.id}): Doubles ONGOING, 16 người, 3 matches → test balance teams"
 puts ''
 puts '=== Cách test ==='
-puts '1. Login player1@example.com → Tab "Trận của tôi" → thấy Game A,B,C'
-puts '2. Bấm vào Game A (ongoing) → thấy matches, tạo match mới, kết thúc match'
-puts '3. Tab "Tìm trận" → thấy Game C,E,G,H,I (status=open)'
-puts '4. Bấm "Đã qua" ở "Trận của tôi" → thấy Game F (finished, 3 matches)'
+puts '1. Login t16021999@gmail.com → Tab "Trận của tôi" → thấy Game J (16 người)'
+puts '2. Bấm vào Game J → test Cân bằng đội, tạo match, kết thúc match'
+puts '3. Login player1@example.com → Tab "Trận của tôi" → thấy Game A,B,I,J'
+puts '4. Tab "Tìm trận" → thấy Game C,E,G,H (status=open)'
+puts '5. Bấm "Đã qua" ở "Trận của tôi" → thấy Game F (finished, 3 matches)'
 puts '===================='
