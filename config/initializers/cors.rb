@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-allowed = ENV['FE_ORIGIN'].presence || 'http://localhost:3001'
+allowed = ENV['FE_ORIGIN'].to_s.chomp('/').presence || 'http://localhost:3001'
 
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do

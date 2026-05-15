@@ -34,7 +34,7 @@ module Api
       end
 
       def user_from_dev_header
-        return unless Rails.env.local?
+        return unless Rails.env.development? || Rails.env.test?
 
         user_id = request.headers['X-User-Id']
         return if user_id.blank?
@@ -44,18 +44,43 @@ module Api
 
       def sign_in!(user)
         user.ensure_session_token!
-        cookies.signed[SESSION_COOKIE] = {
+        cookies.signed[SESSION_COOKIE] = session_cookie_options.merge(
           value: { user_id: user.id, token: user.session_token },
-          httponly: true,
-          same_site: Rails.env.development? ? :lax : :none,
-          secure: !Rails.env.development?,
           expires: 30.days.from_now
-        }
+        )
       end
 
       def sign_out!
         @current_user&.rotate_session_token!
-        cookies.delete(SESSION_COOKIE)
+        cookies.delete(SESSION_COOKIE, session_cookie_delete_options)
+      end
+
+      # Shared cookie options for auth (separate from Rails session store key).
+      def session_cookie_options
+        opts = {
+          httponly: true,
+          secure: !Rails.env.development?,
+          path: '/'
+        }
+
+        cookie_domain = ENV['COOKIE_DOMAIN'].to_s.strip.presence
+        if cookie_domain.present?
+          # Custom domain: app.example.com + api.example.com share cookie (SameSite=Lax).
+          opts[:domain] = cookie_domain
+          opts[:same_site] = :lax
+        elsif Rails.env.development?
+          opts[:same_site] = :lax
+        else
+          # Cross-site (*.run.app): None + Partitioned for Safari CHIPS.
+          opts[:same_site] = :none
+          opts[:partitioned] = true
+        end
+
+        opts
+      end
+
+      def session_cookie_delete_options
+        session_cookie_options.except(:expires, :value)
       end
 
       def user_payload(user)

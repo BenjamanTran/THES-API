@@ -35,7 +35,7 @@ module Api
     # Enable cookies + signed cookie session for browser-based clients.
     config.middleware.use ActionDispatch::Cookies
     config.middleware.use ActionDispatch::Session::CookieStore,
-                          key: '_smashhub_session',
+                          key: '_smashhub_rails_session',
                           same_site: Rails.env.development? ? :lax : :none,
                           secure: !Rails.env.development?
   end
