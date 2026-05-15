@@ -34,7 +34,7 @@ module Api
       end
 
       def user_from_dev_header
-        return unless Rails.env.development? || Rails.env.test?
+        return unless Rails.env.local?
 
         user_id = request.headers['X-User-Id']
         return if user_id.blank?
@@ -44,27 +44,18 @@ module Api
 
       def sign_in!(user)
         user.ensure_session_token!
-        cookies.signed[SESSION_COOKIE] = session_cookie_options.merge(
+        cookies.signed[SESSION_COOKIE] = {
           value: { user_id: user.id, token: user.session_token },
+          httponly: true,
+          same_site: Rails.env.development? ? :lax : :none,
+          secure: !Rails.env.development?,
           expires: 30.days.from_now
-        )
+        }
       end
 
       def sign_out!
         @current_user&.rotate_session_token!
-        cookies.delete(SESSION_COOKIE, session_cookie_options.except(:value, :expires))
-      end
-
-      def session_cookie_options
-        opts = {
-          httponly: true,
-          same_site: Rails.env.development? ? :lax : :none,
-          secure: !Rails.env.development?,
-          path: '/'
-        }
-        # Safari CHIPS: helps when FE calls API cross-origin (without same-origin proxy).
-        opts[:partitioned] = true unless Rails.env.development?
-        opts
+        cookies.delete(SESSION_COOKIE)
       end
 
       def user_payload(user)
