@@ -18,6 +18,11 @@ Rails.application.routes.draw do
       post   '/signup',  to: 'registrations#create'
       post   '/login',   to: 'sessions#create'
       delete '/logout',  to: 'sessions#destroy'
+
+      post '/passwords/forgot', to: 'passwords#forgot'
+      post '/passwords/reset',  to: 'passwords#reset'
+      post '/email_verifications/verify', to: 'email_verifications#verify'
+      post '/email_verifications/resend', to: 'email_verifications#resend'
       get    '/me',      to: 'me#show'
       patch  '/me',      to: 'profile#update'
       put    '/me',      to: 'profile#update'
@@ -51,7 +56,7 @@ Rails.application.routes.draw do
 
   get 'up' => 'rails/health#show', as: :rails_health_check
 
-  get 'sidekiq-health' => ->(env) {
+  get 'sidekiq-health' => lambda { |_env|
     require 'sidekiq/api'
     ps = Sidekiq::ProcessSet.new
     cron_jobs = Sidekiq::Cron::Job.all
@@ -59,10 +64,10 @@ Rails.application.routes.draw do
       sidekiq_running: ps.size > 0,
       processes: ps.size,
       cron_jobs: cron_jobs.map { |j| { name: j.name, cron: j.cron, last_enqueue: j.last_enqueue_time&.iso8601, status: j.status } },
-      redis: Sidekiq.redis { |c| c.ping } == "PONG",
-      fe_origin: ENV['FE_ORIGIN'],
-      rails_env: ENV['RAILS_ENV']
+      redis: Sidekiq.redis { |c| c.ping } == 'PONG',
+      fe_origin: ENV.fetch('FE_ORIGIN', nil),
+      rails_env: ENV.fetch('RAILS_ENV', nil)
     }
-    [200, { "Content-Type" => "application/json" }, [body.to_json]]
+    [200, { 'Content-Type' => 'application/json' }, [body.to_json]]
   }
 end

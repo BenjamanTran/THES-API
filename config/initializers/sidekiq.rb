@@ -24,6 +24,11 @@ Sidekiq.configure_server do |config|
         'cron' => '0 3 * * *',
         'class' => 'Users::CleanupGuestsJob',
         'description' => 'Delete guest accounts older than 30 days and all related data'
+      },
+      'cleanup_unverified_users' => {
+        'cron' => '30 3 * * *',
+        'class' => 'Users::CleanupUnverifiedUsersJob',
+        'description' => 'Delete registered accounts that never verified email after 30 days'
       }
     }
 

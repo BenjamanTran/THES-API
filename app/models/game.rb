@@ -51,6 +51,13 @@ class Game < ApplicationRecord
     host_id == user.id || game_participations.exists?(user_id: user.id, role: :co_host)
   end
 
+  def within_play_time?(at: Time.current)
+    return false if cancelled? || finished?
+    return true if ongoing?
+
+    at >= start_time && at <= end_time
+  end
+
   def fit_level(user)
     return unless user&.rank
 
@@ -93,9 +100,10 @@ class Game < ApplicationRecord
   end
 
   def generate_invite_code
-    self.invite_code ||= loop do
-      code = SecureRandom.alphanumeric(8).downcase
-      break code unless Game.exists?(invite_code: code)
-    end
+    self.invite_code ||=
+      loop do
+        code = SecureRandom.alphanumeric(8).downcase
+        break code unless Game.exists?(invite_code: code)
+      end
   end
 end

@@ -11,7 +11,8 @@ module Matches
 
     def call
       return failure('Only the host can create matches', :forbidden) unless @game.host_or_co_host?(@user)
-      return failure('Game must be ongoing or full') unless @game.ongoing? || @game.full?
+      return failure('Game is not active') if @game.finished? || @game.cancelled?
+      return failure('Not enough players for a match') unless enough_players?
 
       all_ids = @team_a_ids + @team_b_ids
       return failure('Must have players on both teams') if @team_a_ids.empty? || @team_b_ids.empty?
@@ -36,6 +37,13 @@ module Matches
 
       match.match_participations.includes(user: :rank).load
       success(match: match)
+    end
+
+    private
+
+    def enough_players?
+      min = @game.doubles? ? 4 : 2
+      @game.players_count >= min
     end
   end
 end

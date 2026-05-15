@@ -62,18 +62,21 @@ module Api
       end
 
       def promote
-        return render json: { error: 'Only the host can manage co-hosts' }, status: :forbidden unless @game.host_id == @current_user.id
+        unless @game.host_id == @current_user.id
+          return render json: { error: 'Only the host can manage co-hosts' },
+                        status: :forbidden
+        end
 
         gp = @game.game_participations.find_by(user_id: params[:user_id])
         return render json: { error: 'Player not found in this game' }, status: :not_found unless gp
-        return render json: { error: 'Cannot promote the host' }, status: :unprocessable_entity if gp.user_id == @game.host_id
+        return render json: { error: 'Cannot promote the host' }, status: :unprocessable_content if gp.user_id == @game.host_id
 
         new_role = gp.co_host? ? :player : :co_host
         gp.role = new_role
         if gp.save
           render json: { user_id: gp.user_id, role: gp.role }
         else
-          render json: { error: gp.errors.full_messages.join(', ') }, status: :unprocessable_entity
+          render json: { error: gp.errors.full_messages.join(', ') }, status: :unprocessable_content
         end
       end
 
@@ -84,7 +87,7 @@ module Api
 
         gp = @game.game_participations.find_by(user_id: params[:user_id])
         return render json: { error: 'Player not found in this game' }, status: :not_found unless gp
-        return render json: { error: 'Cannot kick the host' }, status: :unprocessable_entity if gp.user_id == @game.host_id
+        return render json: { error: 'Cannot kick the host' }, status: :unprocessable_content if gp.user_id == @game.host_id
 
         if gp.co_host? && @game.host_id != @current_user.id
           return render json: { error: 'Only the host can kick co-hosts' }, status: :forbidden
@@ -242,7 +245,6 @@ module Api
         end
         payload
       end
-
     end
   end
 end

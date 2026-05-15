@@ -34,7 +34,7 @@ module Api
       end
 
       def user_from_dev_header
-        return unless Rails.env.development? || Rails.env.test?
+        return unless Rails.env.local?
 
         user_id = request.headers['X-User-Id']
         return if user_id.blank?
@@ -84,7 +84,10 @@ module Api
       end
 
       def user_payload(user)
-        user.slice(:id, :email, :name, :gender, :phone, :guest).merge(rank: rank_payload(user.rank))
+        user.slice(:id, :email, :name, :gender, :phone, :guest).merge(
+          email_verified: user.email_verified?,
+          rank: rank_payload(user.rank)
+        )
       end
 
       def rank_payload(rank)

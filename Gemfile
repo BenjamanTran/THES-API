@@ -49,6 +49,9 @@ gem 'rack-cors'
 # Pagination
 gem 'kaminari'
 
+# Transactional email (Resend)
+gem 'resend'
+
 # Swagger API documentation
 gem 'rswag-api'
 gem 'rswag-ui'

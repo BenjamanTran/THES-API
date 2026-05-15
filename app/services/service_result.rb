@@ -3,7 +3,7 @@
 class ServiceResult
   attr_reader :data, :error, :status
 
-  def initialize(success:, data: {}, error: nil, status: nil)
+  def initialize(success:, data: {}, error: nil, status: :unprocessable_entity)
     @success = success
     @data = data
     @error = error

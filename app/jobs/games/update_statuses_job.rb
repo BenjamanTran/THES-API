@@ -22,7 +22,12 @@ module Games
     def transition_to_finished(now)
       Game.where(status: %i[open full ongoing])
           .where(end_time: ..now)
-          .find_each { |game| game.update(status: :finished) }
+          .find_each do |game|
+        ActiveRecord::Base.transaction do
+          game.matches.pending.find_each(&:destroy!)
+          game.update!(status: :finished)
+        end
+      end
     end
   end
 end

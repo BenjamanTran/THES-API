@@ -27,6 +27,9 @@ module Api
         unless @match.pending?
           return render json: { error: 'Match already started' }, status: :unprocessable_content
         end
+        unless @game.within_play_time?
+          return render json: { error: 'Chưa tới giờ trận, không thể bắt đầu' }, status: :unprocessable_content
+        end
 
         @match.update!(status: :ongoing, started_at: Time.current)
         render json: match_payload(@match)
