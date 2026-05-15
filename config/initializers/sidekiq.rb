@@ -15,7 +15,8 @@ Sidekiq.configure_server do |config|
   config.on(:startup) do
     schedule = {
       'update_game_statuses' => {
-        'cron' => '*/50 * * * *',
+        'cron' => '0 * * * *',
+        'timezone' => 'Asia/Ho_Chi_Minh',
         'class' => 'Games::UpdateStatusesJob',
         'description' => 'Transition game statuses based on time (open/full -> ongoing -> finished)'
       },
