@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_15_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_15_130000) do
   create_table "game_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "game_id", null: false
@@ -127,6 +127,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_15_120000) do
     t.string "password_reset_digest"
     t.datetime "password_reset_sent_at"
     t.string "phone"
+    t.datetime "session_active_at"
     t.string "session_token"
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_users_on_email", unique: true

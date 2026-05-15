@@ -26,13 +26,22 @@ class User < ApplicationRecord
   validates :password, length: { minimum: 8 }, allow_nil: true, if: -> { password_digest_changed? }
   validates :phone, format: { with: PHONE_REGEX }, allow_blank: true
 
-  def rotate_session_token!
-    update_column(:session_token, SecureRandom.hex(32))
+  SESSION_LIFETIME = 30.days
+
+  def session_active?
+    session_active_at.present? && session_active_at > SESSION_LIFETIME.ago
   end
 
-  def ensure_session_token!
-    rotate_session_token! if session_token.blank?
-    session_token
+  def start_session!
+    update_columns(session_token: SecureRandom.hex(32), session_active_at: Time.current)
+  end
+
+  def end_session!
+    update_columns(session_token: SecureRandom.hex(32), session_active_at: nil)
+  end
+
+  def rotate_session_token!
+    update_column(:session_token, SecureRandom.hex(32))
   end
 
   def email_verified?

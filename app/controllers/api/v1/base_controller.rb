@@ -28,7 +28,8 @@ module Api
 
         payload = raw.with_indifferent_access
         user = User.find_by(id: payload[:user_id])
-        return unless user && user.session_token.present? && user.session_token == payload[:token]
+        return unless user&.session_active?
+        return unless user.session_token.present? && user.session_token == payload[:token]
 
         user
       end
@@ -43,16 +44,26 @@ module Api
       end
 
       def sign_in!(user)
-        user.ensure_session_token!
+        user.start_session!
         cookies.signed[SESSION_COOKIE] = session_cookie_options.merge(
           value: { user_id: user.id, token: user.session_token },
-          expires: 30.days.from_now
+          expires: User::SESSION_LIFETIME.from_now
         )
       end
 
       def sign_out!
-        @current_user&.rotate_session_token!
+        @current_user&.end_session!
         cookies.delete(SESSION_COOKIE, session_cookie_delete_options)
+      end
+
+      def session_cookie_matches?(user)
+        raw = cookies.signed[SESSION_COOKIE]
+        return false unless raw.is_a?(Hash)
+
+        payload = raw.with_indifferent_access
+        payload[:user_id].to_i == user.id &&
+          user.session_token.present? &&
+          user.session_token == payload[:token]
       end
 
       # Shared cookie options for auth (separate from Rails session store key).
