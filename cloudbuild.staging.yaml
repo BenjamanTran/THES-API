@@ -14,6 +14,8 @@ substitutions:
   _RAILS_MASTER_KEY: ""
   _FE_ORIGIN: ""
   _REDIS_HOST: ""
+  _SIDEKIQ_USERNAME: ""
+  _SIDEKIQ_PASSWORD: ""
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -81,7 +83,7 @@ steps:
       - --quiet
       - --port=3000
       - --vpc-connector=${_VPC_CONNECTOR}
-      - --set-env-vars=RAILS_ENV=staging,DB_HOST=${_DB_HOST},DB_USERNAME=${_DB_USERNAME},DB_PASSWORD=${_DB_PASSWORD},DB_NAME=${_DB_NAME},RAILS_MASTER_KEY=${_RAILS_MASTER_KEY},FE_ORIGIN=${_FE_ORIGIN},REDIS_HOST=${_REDIS_HOST}
+      - --set-env-vars=RAILS_ENV=staging,DB_HOST=${_DB_HOST},DB_USERNAME=${_DB_USERNAME},DB_PASSWORD=${_DB_PASSWORD},DB_NAME=${_DB_NAME},RAILS_MASTER_KEY=${_RAILS_MASTER_KEY},FE_ORIGIN=${_FE_ORIGIN},REDIS_HOST=${_REDIS_HOST},SIDEKIQ_USERNAME=${_SIDEKIQ_USERNAME},SIDEKIQ_PASSWORD=${_SIDEKIQ_PASSWORD}
       - --command=./bin/start-with-sidekiq
 
   - id: cleanup-revisions
