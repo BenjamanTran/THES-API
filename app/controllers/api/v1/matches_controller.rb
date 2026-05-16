@@ -4,7 +4,7 @@ module Api
   module V1
     class MatchesController < BaseController
       before_action :set_game
-      before_action :set_match, only: %i[start finish destroy]
+      before_action :set_match, only: %i[update start finish destroy]
 
       def index
         matches = @game.matches.includes(match_participations: { user: :rank }).ordered
@@ -15,6 +15,20 @@ module Api
         result = Matches::CreateService.call(user: @current_user, game: @game, params: create_params)
         if result.success?
           render json: match_payload(result.data[:match]), status: :created
+        else
+          render json: { error: result.error }, status: result.status
+        end
+      end
+
+      def update
+        result = Matches::UpdateService.call(
+          user: @current_user,
+          game: @game,
+          match: @match,
+          params: create_params
+        )
+        if result.success?
+          render json: match_payload(result.data[:match])
         else
           render json: { error: result.error }, status: result.status
         end
@@ -49,7 +63,7 @@ module Api
 
       def destroy
         unless @game.host_or_co_host?(@current_user)
-          return render json: { error: 'Only the host can delete matches' }, status: :forbidden
+          return render json: { error: 'Only host or co-host can delete matches' }, status: :forbidden
         end
         if @match.finished?
           return render json: { error: 'Cannot delete a finished match' }, status: :unprocessable_entity

@@ -11,7 +11,7 @@ module Games
 
     def create
       return failure('Only host or co-host can add placeholder players', :forbidden) unless @game.host_or_co_host?(@user)
-      return failure('Cannot add placeholders after the game has started') unless editable_status?
+      return failure('Cannot add placeholders to a finished or cancelled game') unless editable_status?
       return failure('Name is required') if @params[:name].to_s.strip.blank?
 
       ActiveRecord::Base.transaction do
@@ -30,7 +30,7 @@ module Games
 
         @game.game_participations.create!(user: placeholder, team: assign_team, role: :player)
         @game.update!(players_count: @game.players_count + 1)
-        @game.update!(status: :full) if @game.players_count >= @game.max_players
+        @game.update!(status: :full) if @game.open? && @game.players_count >= @game.max_players
 
         success(player: placeholder)
       end
@@ -67,7 +67,7 @@ module Games
       ActiveRecord::Base.transaction do
         gp.destroy!
         @game.update!(players_count: [@game.players_count - 1, 0].max)
-        @game.update!(status: :open) if @game.full? && @game.players_count < @game.max_players
+        @game.update!(status: :open) if @game.full? && !@game.ongoing? && @game.players_count < @game.max_players
         placeholder.destroy!
       end
 
@@ -79,12 +79,12 @@ module Games
     private
 
     def editable_status?
-      @game.open? || @game.full?
+      !@game.finished? && !@game.cancelled?
     end
 
     def find_placeholder!
       return failure('Only host or co-host can manage placeholder players', :forbidden) unless @game.host_or_co_host?(@user)
-      return failure('Cannot manage placeholders after the game has started') unless editable_status?
+      return failure('Cannot manage placeholders in a finished or cancelled game') unless editable_status?
 
       placeholder = User.placeholders.find_by(id: @params[:id])
       return failure('Placeholder player not found', :not_found) unless placeholder
@@ -107,10 +107,11 @@ module Games
       rating = Rank.rating_from_tier_and_stars(tier_key, stars)
       division = tier_key == :professional ? nil : 3
 
+      declared = { declared_tier: Rank.tiers[tier_key], declared_rating: rating }
       if user.rank
-        user.rank.update!(tier: tier_key, rating: rating, division: division)
+        user.rank.update!(tier: tier_key, rating: rating, division: division, **declared)
       else
-        user.create_rank!(tier: tier_key, rating: rating, division: division)
+        user.create_rank!(tier: tier_key, rating: rating, division: division, **declared)
       end
 
       nil

@@ -13,16 +13,18 @@ class Rank < ApplicationRecord
   validates :rating, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validates :division, inclusion: { in: 1..3 }, allow_nil: true
 
-  RATING_TIERS = {
-    0..399 => :newbie,
-    400..799 => :beginner_plus,
-    800..1199 => :lower_intermediate,
-    1200..1499 => :intermediate,
-    1500..1799 => :upper_intermediate,
-    1800..2099 => :advanced,
-    2100..2399 => :semi_pro,
-    2400.. => :professional
-  }.freeze
+  # 1★ = tier base; each star +100; 5★ = base+400; +100 promotion → next tier 1★ at base+500.
+  STAR_STEP = 100
+  STAR_SPAN = STAR_STEP * 4 # 1★→5★ = 400 pts (4 steps)
+  TIER_SPAN = 500 # distance between 1★ of consecutive tiers (400 stars + 100 promotion)
+
+  TIER_BASE = tiers.keys.map(&:to_sym).each_with_index.to_h { |tier, i| [tier, i * TIER_SPAN] }.freeze
+
+  RATING_TIERS = TIER_BASE.map do |tier, base|
+    [(base...(base + TIER_SPAN)), tier]
+  end.to_h.freeze
+
+  TIER_RANGES = TIER_BASE.transform_values { |base| [base, base + STAR_SPAN] }.freeze
 
   def display_name
     tier_name = I18n.t("ranks.#{tier}")
@@ -38,20 +40,23 @@ class Rank < ApplicationRecord
   end
 
   def self.tier_for(rating)
-    RATING_TIERS.find { |range, _| range.cover?(rating) }&.last || :newbie
+    rating = rating.to_i
+    RATING_TIERS.each do |range, tier|
+      return tier if range.cover?(rating)
+    end
+    :professional
   end
-
-  TIER_RANGES = {
-    newbie: [0, 399], beginner_plus: [400, 799], lower_intermediate: [800, 1199],
-    intermediate: [1200, 1499], upper_intermediate: [1500, 1799], advanced: [1800, 2099],
-    semi_pro: [2100, 2399], professional: [2400, 2800]
-  }.freeze
 
   def self.rating_from_tier_and_stars(tier_key, stars)
     stars = [[stars.to_i, 1].max, 5].min
-    bounds = TIER_RANGES[tier_key.to_sym] || [0, 399]
-    low, high = bounds
-    low + ((stars - 1) * (high - low) / 4.0).round
+    base = TIER_BASE[tier_key.to_sym] || 0
+    base + ((stars - 1) * STAR_STEP)
+  end
+
+  def self.stars_for_rating(tier_key, rating)
+    base = TIER_BASE[tier_key.to_sym] || 0
+    offset = [rating.to_i - base, 0].max
+    [[(offset / STAR_STEP) + 1, 1].max, 5].min
   end
 
   private

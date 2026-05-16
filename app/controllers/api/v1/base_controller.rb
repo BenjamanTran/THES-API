@@ -120,7 +120,9 @@ module Api
         return unless rank
 
         tier_key = declared_tier_key(rank)
-        rating_val = rank.declared_rating || rank.rating
+        return unless tier_key
+
+        rating_val = rank.declared_rating.presence || Rank.rating_from_tier_and_stars(tier_key, 3)
 
         {
           tier: tier_key.to_s,
@@ -130,9 +132,9 @@ module Api
       end
 
       def declared_tier_key(rank)
-        return rank.tier if rank.declared_tier.blank?
+        return unless rank.declared_tier.present?
 
-        Rank.tiers.key(rank.declared_tier) || rank.tier
+        Rank.tiers.key(rank.declared_tier)
       end
     end
   end

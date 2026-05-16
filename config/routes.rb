@@ -47,7 +47,7 @@ Rails.application.routes.draw do
 
         resources :placeholders, only: %i[create update destroy], controller: 'placeholders'
 
-        resources :matches, only: %i[index create destroy], controller: 'matches' do
+        resources :matches, only: %i[index create update destroy], controller: 'matches' do
           member do
             post :start
             post :finish

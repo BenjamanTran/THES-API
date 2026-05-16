@@ -253,7 +253,7 @@ module Api
 
       def match_player(mp)
         user = mp.user
-        entry = { id: user.id, name: user.name }
+        entry = { id: user.id, name: user.name, gender: user.gender }
         entry[:rank] = rank_payload(user.rank) if user.rank
         entry
       end
@@ -267,7 +267,10 @@ module Api
           role: participation.role,
           placeholder: user.placeholder?
         }
-        payload[:rank] = rank_payload(user.rank) if user.rank
+        if user.rank
+          payload[:rank] = rank_payload(user.rank)
+          payload[:declared_rank] = declared_rank_payload(user.rank)
+        end
         if participation.host_rated_tier.present?
           payload[:host_rated_tier] = participation.host_rated_tier_key
           payload[:host_rated_stars] = participation.host_rated_stars

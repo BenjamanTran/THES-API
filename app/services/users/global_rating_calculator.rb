@@ -2,7 +2,7 @@
 
 module Users
   class GlobalRatingCalculator
-    DEFAULT_BASE_RATING = 1000
+    DEFAULT_BASE_RATING = Rank.rating_from_tier_and_stars(:newbie, 3) # 200
     MATCH_WIN_POINTS = 10
     MATCH_LOSS_POINTS = 7
 
@@ -55,12 +55,13 @@ module Users
     end
 
     def average_host_base_rating(participations)
-      ratings = participations.filter_map do |gp|
-        tier_key = gp.host_rated_tier_key&.to_sym
-        next unless tier_key && Rank.tiers.key?(tier_key.to_s)
+      ratings =
+        participations.filter_map do |gp|
+          tier_key = gp.host_rated_tier_key&.to_sym
+          next unless tier_key && Rank.tiers.key?(tier_key.to_s)
 
-        Rank.rating_from_tier_and_stars(tier_key, gp.host_rated_stars)
-      end
+          Rank.rating_from_tier_and_stars(tier_key, gp.host_rated_stars)
+        end
       return DEFAULT_BASE_RATING if ratings.empty?
 
       ratings.sum.to_f / ratings.size
