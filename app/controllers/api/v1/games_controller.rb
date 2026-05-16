@@ -5,7 +5,7 @@ module Api
     class GamesController < BaseController
       skip_before_action :set_current_user, only: %i[index show search]
       before_action :set_current_user_optional, only: %i[index show search]
-      before_action :set_game, only: %i[show join leave promote kick rate_player]
+      before_action :set_game, only: %i[show update join leave promote kick rate_player]
 
       MAX_PER_PAGE = 50
       DEFAULT_PER_PAGE = 20
@@ -23,6 +23,19 @@ module Api
 
       def show
         render json: game_detail(@game)
+      end
+
+      def update
+        result = Games::UpdateSettingsService.call(
+          user: @current_user,
+          game: @game,
+          params: update_params
+        )
+        if result.success?
+          render json: game_detail(result.data[:game])
+        else
+          render json: { error: result.error }, status: result.status
+        end
       end
 
       def create
@@ -70,6 +83,9 @@ module Api
         gp = @game.game_participations.find_by(user_id: params[:user_id])
         return render json: { error: 'Player not found in this game' }, status: :not_found unless gp
         return render json: { error: 'Cannot promote the host' }, status: :unprocessable_content if gp.user_id == @game.host_id
+        if gp.user.placeholder?
+          return render json: { error: 'Cannot promote a placeholder player' }, status: :unprocessable_content
+        end
 
         new_role = gp.co_host? ? :player : :co_host
         gp.role = new_role
@@ -88,6 +104,9 @@ module Api
         gp = @game.game_participations.find_by(user_id: params[:user_id])
         return render json: { error: 'Player not found in this game' }, status: :not_found unless gp
         return render json: { error: 'Cannot kick the host' }, status: :unprocessable_content if gp.user_id == @game.host_id
+        if gp.user.placeholder?
+          return render json: { error: 'Use remove placeholder instead' }, status: :unprocessable_content
+        end
 
         if gp.co_host? && @game.host_id != @current_user.id
           return render json: { error: 'Only the host can kick co-hosts' }, status: :forbidden
@@ -118,6 +137,7 @@ module Api
           host_rated_stars: params[:stars].to_i,
           host_rating_note: params[:note].presence
         )
+        Users::GlobalRatingCalculator.sync!(user: gp.user)
 
         render json: player_payload(gp.reload)
       rescue ActiveRecord::RecordInvalid => e
@@ -140,6 +160,10 @@ module Api
       def game_params
         params.permit(:start_time, :end_time, :lat, :lng, :match_type, :min_tier, :max_tier,
                       :max_players, :description, :title, :min_price, :max_price, :venue_id, courts: [])
+      end
+
+      def update_params
+        params.permit(:max_players, courts: []).to_h
       end
 
       def search_params
@@ -236,7 +260,13 @@ module Api
 
       def player_payload(participation)
         user = participation.user
-        payload = { id: user.id, name: user.name, gender: user.gender, role: participation.role }
+        payload = {
+          id: user.id,
+          name: user.name,
+          gender: user.gender,
+          role: participation.role,
+          placeholder: user.placeholder?
+        }
         payload[:rank] = rank_payload(user.rank) if user.rank
         if participation.host_rated_tier.present?
           payload[:host_rated_tier] = participation.host_rated_tier_key

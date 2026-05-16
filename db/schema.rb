@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_15_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_16_130000) do
   create_table "game_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "game_id", null: false
@@ -90,6 +90,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_15_130000) do
 
   create_table "ranks", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.integer "declared_rating"
+    t.integer "declared_tier"
     t.integer "division", default: 3
     t.datetime "last_played_at"
     t.integer "losses", default: 0, null: false
@@ -127,10 +129,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_15_130000) do
     t.string "password_reset_digest"
     t.datetime "password_reset_sent_at"
     t.string "phone"
+    t.boolean "placeholder", default: false, null: false
     t.datetime "session_active_at"
     t.string "session_token"
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["placeholder"], name: "index_users_on_placeholder"
     t.index ["session_token"], name: "index_users_on_session_token", unique: true
   end
 

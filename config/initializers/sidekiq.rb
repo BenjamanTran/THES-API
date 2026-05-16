@@ -13,6 +13,10 @@ Sidekiq.configure_server do |config|
   config.redis = redis_config
 
   config.on(:startup) do
+    # Feb 31 never exists — cleanup crons stay registered but never fire.
+    # Enqueue manually from Sidekiq Web when needed.
+    never_cron = '0 0 31 2 *'
+
     schedule = {
       'update_game_statuses' => {
         'cron' => '0 * * * *',
@@ -21,14 +25,16 @@ Sidekiq.configure_server do |config|
         'description' => 'Transition game statuses based on time (open/full -> ongoing -> finished)'
       },
       'cleanup_expired_guests' => {
-        'cron' => '0 3 * * *',
+        'cron' => never_cron,
+        'timezone' => 'Asia/Ho_Chi_Minh',
         'class' => 'Users::CleanupGuestsJob',
-        'description' => 'Delete guest accounts older than 30 days and all related data'
+        'description' => 'Manual only (Feb 31). Delete guest accounts older than 30 days'
       },
       'cleanup_unverified_users' => {
-        'cron' => '30 3 * * *',
+        'cron' => never_cron,
+        'timezone' => 'Asia/Ho_Chi_Minh',
         'class' => 'Users::CleanupUnverifiedUsersJob',
-        'description' => 'Delete registered accounts that never verified email after 30 days'
+        'description' => 'Manual only (Feb 31). Delete unverified accounts after 30 days'
       }
     }
 

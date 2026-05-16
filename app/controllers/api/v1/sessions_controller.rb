@@ -9,14 +9,9 @@ module Api
       def create
         user = User.find_by(email: params[:email].to_s.strip.downcase)
         if user&.authenticate(params[:password].to_s)
-          if user.session_active? && !session_cookie_matches?(user)
-            return render json: {
-              error: 'Tài khoản đang được sử dụng trên thiết bị khác. Vui lòng đăng xuất trước khi đăng nhập lại.'
-            }, status: :conflict
-          end
-
+          # Last login wins: rotate session token and invalidate other devices' cookies.
           sign_in!(user)
-          render json: { user: user_payload(user) }
+          render json: auth_response(user)
         else
           render json: { error: 'Email hoặc mật khẩu không đúng' }, status: :unauthorized
         end

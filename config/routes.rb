@@ -37,12 +37,15 @@ Rails.application.routes.draw do
           get :search
         end
         member do
+          patch :update
           post :join
           post :leave
           post :promote
           post :kick
           patch :rate_player
         end
+
+        resources :placeholders, only: %i[create update destroy], controller: 'placeholders'
 
         resources :matches, only: %i[index create destroy], controller: 'matches' do
           member do

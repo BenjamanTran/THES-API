@@ -13,6 +13,7 @@ class User < ApplicationRecord
   has_secure_password validations: false
 
   has_many :game_participations, dependent: :destroy
+  has_many :match_participations, dependent: :destroy
   has_many :games, through: :game_participations
   has_one :rank, dependent: :destroy
   has_many :user_skills, dependent: :destroy
@@ -20,9 +21,13 @@ class User < ApplicationRecord
   before_validation :normalize_email
 
   scope :guests, -> { where(guest: true) }
+  scope :placeholders, -> { where(placeholder: true) }
+  scope :real_accounts, -> { where(placeholder: false, guest: false) }
 
   validates :name, presence: true, length: { maximum: 80 }
-  validates :email, presence: true, uniqueness: { case_sensitive: false }, format: { with: EMAIL_REGEX }, unless: :guest?
+  validates :email, presence: true, uniqueness: { case_sensitive: false }, format: { with: EMAIL_REGEX },
+                    unless: -> { guest? || placeholder? }
+  validate :guest_and_placeholder_exclusive
   validates :password, length: { minimum: 8 }, allow_nil: true, if: -> { password_digest_changed? }
   validates :phone, format: { with: PHONE_REGEX }, allow_blank: true
 
@@ -97,6 +102,12 @@ class User < ApplicationRecord
   end
 
   private
+
+  def guest_and_placeholder_exclusive
+    return unless guest? && placeholder?
+
+    errors.add(:base, 'cannot be both guest and placeholder')
+  end
 
   def normalize_email
     self.email = email.to_s.strip.downcase if email.present?

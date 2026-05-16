@@ -7,6 +7,11 @@ module Api
       before_action :set_current_user_optional, only: [:index]
 
       def index
+        if ActiveModel::Type::Boolean.new.cast(params[:suggested])
+          venues = Venue.suggested_by_games
+          return render json: { venues: venues.map { |v| suggested_venue_payload(v) } }
+        end
+
         venues = Venue.by_city(params[:city]).search(params[:q]).verified_first.limit(50)
         render json: { venues: venues.map { |v| venue_payload(v) } }
       end
@@ -41,6 +46,10 @@ module Api
           lng: venue.lng,
           verified: venue.verified
         }
+      end
+
+      def suggested_venue_payload(venue)
+        venue_payload(venue).merge(games_count: venue.read_attribute(:games_count).to_i)
       end
     end
   end

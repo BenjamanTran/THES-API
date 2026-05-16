@@ -4,7 +4,7 @@ module Api
   module V1
     class MeController < BaseController
       def show
-        render json: { user: user_payload(@current_user) }
+        render json: auth_response(@current_user)
       end
     end
   end

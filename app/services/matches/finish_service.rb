@@ -76,36 +76,34 @@ module Matches
       winners.each { |mp| mp.update!(winner: true) }
       losers.each  { |mp| mp.update!(winner: false) }
 
-      winner_ratings = winners.map { |mp| mp.user.rank&.rating || 1000 }
-      loser_ratings  = losers.map  { |mp| mp.user.rank&.rating || 1000 }
-
-      deltas = Ranks::RatingCalculator.call(winner_ratings: winner_ratings, loser_ratings: loser_ratings)
+      win_points = Users::GlobalRatingCalculator::MATCH_WIN_POINTS
+      loss_points = Users::GlobalRatingCalculator::MATCH_LOSS_POINTS
 
       winners.each do |mp|
-        rank = mp.user.rank || mp.user.create_rank!(tier: :newbie, rating: 1000)
+        rank = mp.user.rank || mp.user.create_rank!(tier: :newbie, rating: Users::GlobalRatingCalculator::DEFAULT_BASE_RATING)
         rank.update!(
-          rating: rank.rating + deltas[:winner_delta],
           wins: rank.wins + 1,
           matches_count: rank.matches_count + 1,
           last_played_at: Time.current
         )
+        Users::GlobalRatingCalculator.sync!(user: mp.user)
         participants_data << {
           user_id: mp.user_id, name: mp.user.name,
-          team: mp.team, winner: true, rating_change: deltas[:winner_delta]
+          team: mp.team, winner: true, rating_change: win_points
         }
       end
 
       losers.each do |mp|
-        rank = mp.user.rank || mp.user.create_rank!(tier: :newbie, rating: 1000)
+        rank = mp.user.rank || mp.user.create_rank!(tier: :newbie, rating: Users::GlobalRatingCalculator::DEFAULT_BASE_RATING)
         rank.update!(
-          rating: [rank.rating + deltas[:loser_delta], 0].max,
           losses: rank.losses + 1,
           matches_count: rank.matches_count + 1,
           last_played_at: Time.current
         )
+        Users::GlobalRatingCalculator.sync!(user: mp.user)
         participants_data << {
           user_id: mp.user_id, name: mp.user.name,
-          team: mp.team, winner: false, rating_change: deltas[:loser_delta]
+          team: mp.team, winner: false, rating_change: -loss_points
         }
       end
     end

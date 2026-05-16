@@ -56,16 +56,6 @@ module Api
         cookies.delete(SESSION_COOKIE, session_cookie_delete_options)
       end
 
-      def session_cookie_matches?(user)
-        raw = cookies.signed[SESSION_COOKIE]
-        return false unless raw.is_a?(Hash)
-
-        payload = raw.with_indifferent_access
-        payload[:user_id].to_i == user.id &&
-          user.session_token.present? &&
-          user.session_token == payload[:token]
-      end
-
       # Shared cookie options for auth (separate from Rails session store key).
       def session_cookie_options
         opts = {
@@ -94,17 +84,55 @@ module Api
         session_cookie_options.except(:expires, :value)
       end
 
+      def auth_response(user)
+        user = user.reload if user.persisted?
+
+        {
+          user: user_payload(user),
+          stats: Users::StatsPayload.call(user: user)
+        }
+      end
+
       def user_payload(user)
         user.slice(:id, :email, :name, :gender, :phone, :guest).merge(
           email_verified: user.email_verified?,
-          rank: rank_payload(user.rank)
+          rank: rank_payload(user.rank),
+          declared_rank: declared_rank_payload(user.rank)
         )
       end
 
       def rank_payload(rank)
         return unless rank
 
-        rank.slice(:tier, :division, :rating).merge(display_name: rank.display_name)
+        computed = Users::GlobalRatingCalculator.call(user: rank.user)
+        rank.slice(:wins, :losses, :matches_count).merge(
+          tier: computed[:tier],
+          division: computed[:division],
+          rating: computed[:rating],
+          display_name: computed[:display_name],
+          host_rating_count: computed[:host_rating_count],
+          host_base_rating: computed[:host_base_rating],
+          match_points: computed[:match_points]
+        )
+      end
+
+      def declared_rank_payload(rank)
+        return unless rank
+
+        tier_key = declared_tier_key(rank)
+        rating_val = rank.declared_rating || rank.rating
+
+        {
+          tier: tier_key.to_s,
+          rating: rating_val,
+          display_name: I18n.t("ranks.#{tier_key}")
+        }
+      end
+
+      def declared_tier_key(rank)
+        return rank.tier if rank.declared_tier.blank?
+
+        Rank.tiers.key(rank.declared_tier) || rank.tier
       end
     end
   end

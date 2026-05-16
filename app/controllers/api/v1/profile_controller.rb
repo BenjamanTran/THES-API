@@ -8,7 +8,7 @@ module Api
           @current_user.update!(user_params)
           apply_tier_change!(params[:tier]) if params.key?(:tier)
         end
-        render json: { user: user_payload(@current_user.reload) }
+        render json: auth_response(@current_user)
       rescue ActiveRecord::RecordInvalid => e
         render json: { errors: e.record.errors.full_messages }, status: :unprocessable_content
       rescue ArgumentError => e
@@ -40,7 +40,13 @@ module Api
         division = tier_sym == :professional ? nil : 3
 
         rank = @current_user.rank || @current_user.build_rank
-        rank.assign_attributes(tier: tier_sym, rating: rating, division: division)
+        rank.assign_attributes(
+          tier: tier_sym,
+          rating: rating,
+          division: division,
+          declared_tier: Rank.tiers[tier_sym],
+          declared_rating: rating
+        )
         rank.save!
       end
     end

@@ -10,4 +10,12 @@ class Venue < ApplicationRecord
   scope :by_city, ->(city) { where(city: city) if city.present? }
   scope :search, ->(q) { where('name LIKE :q OR address LIKE :q OR district LIKE :q', q: "%#{q}%") if q.present? }
   scope :verified_first, -> { order(verified: :desc, name: :asc) }
+  scope :suggested_by_games, lambda { |limit = 5|
+    left_joins(:games)
+      .group(:id)
+      .having('COUNT(games.id) > 0')
+      .order(Arel.sql('COUNT(games.id) DESC'))
+      .limit(limit)
+      .select('venues.*, COUNT(games.id) AS games_count')
+  }
 end

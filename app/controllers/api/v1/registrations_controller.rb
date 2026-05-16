@@ -10,7 +10,7 @@ module Api
         user = User.new(registration_params)
         if user.save
           sign_in!(user)
-          render json: { user: user_payload(user) }, status: :created
+          render json: auth_response(user), status: :created
         else
           render json: { errors: user.errors.full_messages }, status: :unprocessable_content
         end
