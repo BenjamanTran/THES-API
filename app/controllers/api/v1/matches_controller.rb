@@ -116,7 +116,7 @@ module Api
       def player_entry(mp_entry)
         user = mp_entry.user
         entry = { id: user.id, name: user.name, gender: user.gender, winner: mp_entry.winner }
-        entry[:rank] = rank_payload(user.rank) if user.rank
+        entry[:rank] = game_player_rank_payload(user) if user.rank
         entry
       end
     end

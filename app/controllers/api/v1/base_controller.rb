@@ -136,6 +136,26 @@ module Api
 
         Rank.tiers.key(rank.declared_tier)
       end
+
+      # Placeholders use host-assigned skill at creation, not global rating.
+      def placeholder_rank_payload(rank)
+        return unless rank
+
+        tier_key = declared_tier_key(rank) || rank.tier
+        rating_val = rank.declared_rating.presence || rank.rating
+
+        rank.slice(:wins, :losses, :matches_count, :division).merge(
+          tier: tier_key.to_s,
+          rating: rating_val,
+          display_name: I18n.t("ranks.#{tier_key}")
+        )
+      end
+
+      def game_player_rank_payload(user)
+        return unless user.rank
+
+        user.placeholder? ? placeholder_rank_payload(user.rank) : rank_payload(user.rank)
+      end
     end
   end
 end

@@ -70,21 +70,8 @@ module Api
           role: participation.role,
           placeholder: true
         }
-        payload[:rank] = rank_payload(user.rank) if user.rank
+        payload[:rank] = game_player_rank_payload(user) if user.rank
         payload
-      end
-
-      def rank_payload(rank)
-        computed = Users::GlobalRatingCalculator.call(user: rank.user)
-        rank.slice(:wins, :losses, :matches_count).merge(
-          tier: computed[:tier],
-          division: computed[:division],
-          rating: computed[:rating],
-          display_name: computed[:display_name],
-          host_rating_count: computed[:host_rating_count],
-          host_base_rating: computed[:host_base_rating],
-          match_points: computed[:match_points]
-        )
       end
     end
   end
