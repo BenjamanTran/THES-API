@@ -12,7 +12,7 @@ module Api
       end
 
       def join
-        return render json: { error: 'Trận đã bắt đầu — chỉ xem được lịch thi đấu' }, status: :unprocessable_content if session_started?
+        return render json: { error: 'Trận đã bắt đầu — chỉ xem được lịch thi đấu' }, status: :unprocessable_content if @game.session_started?
         return render json: { error: 'Game is not open for joining' }, status: :unprocessable_content unless joinable?
 
         user = nil
@@ -89,18 +89,24 @@ module Api
 
       def attach_invite_snapshot(payload)
         mode = payload[:game][:mode]
-        game = Game.includes(
-          game_participations: { user: :rank },
-          matches: { match_participations: { user: :rank } }
-        ).find(@game.id)
+        game_id = @game.id
 
-        session_stats = session_match_stats_for_game(game)
-        payload[:players] = game.game_participations.map do |gp|
-          invite_player_payload(gp, session_stats[gp.user_id])
-        end.sort_by { |p| p[:name].to_s.downcase }
-        payload[:match_counts] = match_counts_for_game(game)
+        participations = GameParticipation.where(game_id: game_id).includes(user: :rank).to_a
+        session_stats = session_match_stats_for_game_id(game_id)
 
-        scope = game.matches
+        payload[:players] = participations
+          .map { |gp| invite_player_payload(gp, session_stats[gp.user_id]) }
+          .sort_by { |p| p[:name].to_s.downcase }
+        payload[:match_counts] = match_counts_for_game_id(game_id)
+
+        matches = invite_matches_scope(game_id, mode)
+                    .includes(match_participations: :user)
+                    .to_a
+        payload[:matches] = matches.map { |m| invite_match_summary(m) }
+      end
+
+      def invite_matches_scope(game_id, mode)
+        scope = Match.where(game_id: game_id)
         if mode == 'live'
           ongoing = Match.statuses[:ongoing]
           pending = Match.statuses[:pending]
@@ -111,14 +117,13 @@ module Api
                          match_number: :asc
                        )
         else
-          scope = scope.order(status: :desc, match_number: :asc)
+          scope.order(status: :desc, match_number: :asc)
         end
-        payload[:matches] = scope.map { |m| invite_match_summary(m) }
       end
 
-      def session_match_stats_for_game(game)
+      def session_match_stats_for_game_id(game_id)
         rows = MatchParticipation.joins(:match)
-                                 .where(matches: { game_id: game.id, status: Match.statuses[:finished] })
+                                 .where(matches: { game_id: game_id, status: Match.statuses[:finished] })
                                  .group(:user_id)
                                  .pluck(
                                    :user_id,
@@ -132,8 +137,8 @@ module Api
         end
       end
 
-      def match_counts_for_game(game)
-        counts = game.matches.group(:status).count
+      def match_counts_for_game_id(game_id)
+        counts = Match.where(game_id: game_id).group(:status).count
         {
           pending: counts['pending'] || counts[0] || 0,
           ongoing: counts['ongoing'] || counts[1] || 0,
@@ -143,15 +148,22 @@ module Api
 
       def invite_player_payload(participation, session_stats)
         user = participation.user
-        {
+        payload = {
           id: user.id,
           name: user.name,
           gender: user.gender,
           session_matches: session_stats || { played: 0, wins: 0, losses: 0 }
         }
+        payload[:rank] = game_player_rank_stored(user) if user.rank
+        if participation.host_rated_tier.present?
+          payload[:host_rated_tier] = participation.host_rated_tier_key
+          payload[:host_rated_stars] = participation.host_rated_stars
+        end
+        payload
       end
 
       def invite_match_summary(match)
+        participations = match.match_participations
         {
           id: match.id,
           match_number: match.match_number,
@@ -160,9 +172,13 @@ module Api
           winner_team: match.winner_team,
           team_a_score: match.team_a_score,
           team_b_score: match.team_b_score,
-          team_a: match.match_participations.select(&:team_a?).map { |mp| { id: mp.user.id, name: mp.user.name } },
-          team_b: match.match_participations.select(&:team_b?).map { |mp| { id: mp.user.id, name: mp.user.name } }
+          team_a: participations.select(&:team_a?).map { |mp| invite_match_player(mp) },
+          team_b: participations.select(&:team_b?).map { |mp| invite_match_player(mp) }
         }
+      end
+
+      def invite_match_player(mp)
+        { id: mp.user.id, name: mp.user.name }
       end
     end
   end

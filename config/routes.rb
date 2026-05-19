@@ -50,6 +50,7 @@ Rails.application.routes.draw do
         resources :matches, only: %i[index create update destroy], controller: 'matches' do
           collection do
             post :generate_batch
+            delete :pending, action: :destroy_pending
           end
           member do
             post :start

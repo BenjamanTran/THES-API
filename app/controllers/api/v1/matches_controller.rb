@@ -125,12 +125,22 @@ module Api
 
         match_id = @match.id
         @match.destroy!
-        Games::CableBroadcaster.broadcast(
-          game: @game,
-          event: 'match.deleted',
-          payload: { match_id: match_id }
-        )
+        broadcast_match_deleted(match_id)
         render json: { message: 'Match deleted' }
+      end
+
+      def destroy_pending
+        unless @game.host_or_co_host?(@current_user)
+          return render json: { error: 'Only host or co-host can delete matches' }, status: :forbidden
+        end
+
+        pending = @game.matches.pending.to_a
+        match_ids = pending.map(&:id)
+        return render json: { deleted_count: 0, match_ids: [] } if match_ids.empty?
+
+        Match.transaction { pending.each(&:destroy!) }
+        match_ids.each { |id| broadcast_match_deleted(id) }
+        render json: { deleted_count: match_ids.size, match_ids: match_ids }
       end
 
       private
@@ -140,6 +150,14 @@ module Api
           game: @game,
           event: event,
           payload: { match: match_payload(match) }
+        )
+      end
+
+      def broadcast_match_deleted(match_id)
+        Games::CableBroadcaster.broadcast(
+          game: @game,
+          event: 'match.deleted',
+          payload: { match_id: match_id }
         )
       end
 
