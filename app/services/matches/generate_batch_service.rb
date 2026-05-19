@@ -63,9 +63,20 @@ module Matches
     end
 
     def pick_roster(participant_ids, scheduled, needed)
-      participant_ids
-        .sort_by { |id| [scheduled[id] || 0, rand] }
-        .first(needed)
+      return [] if participant_ids.length < needed
+
+      best = nil
+      best_sum = nil
+
+      participant_ids.combination(needed).each do |combo|
+        sum = combo.sum { |id| scheduled[id] || 0 }
+        if best.nil? || sum < best_sum || (sum == best_sum && combo.sort < best.sort)
+          best_sum = sum
+          best = combo
+        end
+      end
+
+      best || []
     end
 
     def split_teams(roster, users_by_id, team_size)

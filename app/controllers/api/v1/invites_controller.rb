@@ -100,8 +100,19 @@ module Api
         end.sort_by { |p| p[:name].to_s.downcase }
         payload[:match_counts] = match_counts_for_game(game)
 
-        scope = game.matches.order(status: :desc, match_number: :asc)
-        scope = scope.where(status: %i[ongoing pending]) if mode == 'live'
+        scope = game.matches
+        if mode == 'live'
+          ongoing = Match.statuses[:ongoing]
+          pending = Match.statuses[:pending]
+          scope = scope.where(status: %i[ongoing pending])
+                       .order(
+                         Arel.sql("CASE status WHEN #{ongoing} THEN 0 WHEN #{pending} THEN 1 ELSE 2 END"),
+                         priority: :desc,
+                         match_number: :asc
+                       )
+        else
+          scope = scope.order(status: :desc, match_number: :asc)
+        end
         payload[:matches] = scope.map { |m| invite_match_summary(m) }
       end
 
