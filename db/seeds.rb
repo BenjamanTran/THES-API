@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative 'seeds/rating_helpers'
+
 puts 'Seeding...'
 now = Time.current
 
@@ -91,47 +93,47 @@ u30 = users['player30@example.com']
 
 puts "Users: #{User.count}"
 
-# ── 2. Ranks ────────────────────────────────────────────────────
-rank_data = {
-  u1  => { tier: :advanced,            rating: 1900, wins: 45, losses: 12 },
-  u2  => { tier: :upper_intermediate,  rating: 1600, wins: 30, losses: 18 },
-  u3  => { tier: :intermediate,        rating: 1300, wins: 22, losses: 20 },
-  u4  => { tier: :advanced,            rating: 1850, wins: 40, losses: 15 },
-  u5  => { tier: :lower_intermediate,  rating: 950,  wins: 15, losses: 25 },
-  u6  => { tier: :upper_intermediate,  rating: 1700, wins: 35, losses: 10 },
-  u7  => { tier: :beginner_plus,       rating: 600,  wins: 8,  losses: 30 },
-  u8  => { tier: :intermediate,        rating: 1400, wins: 28, losses: 22 },
-  u9  => { tier: :advanced,            rating: 1820, wins: 38, losses: 14 },
-  u10 => { tier: :intermediate,        rating: 1350, wins: 20, losses: 18 },
-  u11 => { tier: :upper_intermediate,  rating: 1550, wins: 25, losses: 20 },
-  u12 => { tier: :lower_intermediate,  rating: 1050, wins: 12, losses: 22 },
-  u13 => { tier: :intermediate,        rating: 1250, wins: 18, losses: 16 },
-  u14 => { tier: :beginner_plus,       rating: 700,  wins: 10, losses: 28 },
-  u15 => { tier: :upper_intermediate,  rating: 1650, wins: 32, losses: 12 },
-  u16 => { tier: :lower_intermediate,  rating: 900,  wins: 14, losses: 24 },
-  u17 => { tier: :semi_pro,            rating: 2200, wins: 60, losses: 8 },
-  u18 => { tier: :advanced,            rating: 1950, wins: 48, losses: 14 },
-  u19 => { tier: :intermediate,        rating: 1380, wins: 24, losses: 20 },
-  u20 => { tier: :beginner_plus,       rating: 550,  wins: 6,  losses: 32 },
-  u21 => { tier: :upper_intermediate,  rating: 1720, wins: 36, losses: 16 },
-  u22 => { tier: :lower_intermediate,  rating: 980,  wins: 16, losses: 26 },
-  u23 => { tier: :advanced,            rating: 1880, wins: 42, losses: 12 },
-  u24 => { tier: :intermediate,        rating: 1320, wins: 21, losses: 19 },
-  u25 => { tier: :semi_pro,            rating: 2150, wins: 55, losses: 10 },
-  u26 => { tier: :newbie,              rating: 200,  wins: 2,  losses: 18 },
-  u27 => { tier: :upper_intermediate,  rating: 1580, wins: 28, losses: 18 },
-  u28 => { tier: :lower_intermediate,  rating: 1020, wins: 13, losses: 23 },
-  u29 => { tier: :professional,        rating: 2500, wins: 70, losses: 5 },
-  u30 => { tier: :intermediate,        rating: 1280, wins: 19, losses: 17 },
-  admin => { tier: :advanced,          rating: 1900, wins: 50, losses: 10 },
-}
+# ── 2. Ranks (tier + stars → rating; declared_*; global sync via host skill + W/L) ──
+# Stars map to Rank::TIER_BASE + (stars-1)×100 — same as production Rank / FE rating-stars.
 
-rank_data.each do |user, data|
-  user.rank || user.create_rank!(
-    tier: data[:tier], rating: data[:rating], division: rand(1..3),
-    wins: data[:wins], losses: data[:losses],
-    matches_count: data[:wins] + data[:losses]
-  )
+RANK_PROFILES = {
+  'player1@example.com'  => { tier: :advanced,            stars: 4, wins: 28, losses: 14 },
+  'player2@example.com'  => { tier: :upper_intermediate,  stars: 3, wins: 22, losses: 18 },
+  'player3@example.com'  => { tier: :intermediate,          stars: 3, wins: 18, losses: 20 },
+  'player4@example.com'  => { tier: :advanced,              stars: 3, wins: 24, losses: 16 },
+  'player5@example.com'  => { tier: :lower_intermediate,    stars: 4, wins: 12, losses: 22 },
+  'player6@example.com'  => { tier: :upper_intermediate,    stars: 4, wins: 26, losses: 12 },
+  'player7@example.com'  => { tier: :beginner_plus,         stars: 2, wins: 6,  losses: 24 },
+  'player8@example.com'  => { tier: :intermediate,          stars: 4, wins: 20, losses: 18 },
+  'player9@example.com'  => { tier: :advanced,              stars: 3, wins: 30, losses: 12 },
+  'player10@example.com' => { tier: :intermediate,          stars: 2, wins: 14, losses: 16 },
+  'player11@example.com' => { tier: :upper_intermediate,    stars: 3, wins: 19, losses: 17 },
+  'player12@example.com' => { tier: :lower_intermediate,    stars: 3, wins: 10, losses: 20 },
+  'player13@example.com' => { tier: :intermediate,          stars: 3, wins: 16, losses: 14 },
+  'player14@example.com' => { tier: :beginner_plus,         stars: 3, wins: 8,  losses: 26 },
+  'player15@example.com' => { tier: :upper_intermediate,    stars: 4, wins: 25, losses: 11 },
+  'player16@example.com' => { tier: :lower_intermediate,    stars: 2, wins: 9,  losses: 21 },
+  'player17@example.com' => { tier: :semi_pro,              stars: 3, wins: 35, losses: 8 },
+  'player18@example.com' => { tier: :advanced,              stars: 4, wins: 32, losses: 10 },
+  'player19@example.com' => { tier: :intermediate,          stars: 4, wins: 17, losses: 15 },
+  'player20@example.com' => { tier: :beginner_plus,         stars: 2, wins: 4,  losses: 28 },
+  'player21@example.com' => { tier: :upper_intermediate,    stars: 4, wins: 27, losses: 13 },
+  'player22@example.com' => { tier: :lower_intermediate,    stars: 3, wins: 11, losses: 19 },
+  'player23@example.com' => { tier: :advanced,              stars: 3, wins: 29, losses: 11 },
+  'player24@example.com' => { tier: :intermediate,          stars: 3, wins: 15, losses: 17 },
+  'player25@example.com' => { tier: :semi_pro,              stars: 4, wins: 38, losses: 7 },
+  'player26@example.com' => { tier: :newbie,                stars: 3, wins: 2,  losses: 16 },
+  'player27@example.com' => { tier: :upper_intermediate,    stars: 3, wins: 21, losses: 15 },
+  'player28@example.com' => { tier: :lower_intermediate,    stars: 4, wins: 13, losses: 18 },
+  'player29@example.com' => { tier: :professional,          stars: 3, wins: 42, losses: 6 },
+  'player30@example.com' => { tier: :intermediate,          stars: 2, wins: 12, losses: 14 },
+  't16021999@gmail.com'    => { tier: :advanced,            stars: 3, wins: 24, losses: 12 },
+}.freeze
+
+(players.map { |p| p[:email] } + ['t16021999@gmail.com']).each do |email|
+  user = User.find_by!(email: email)
+  profile = RANK_PROFILES[email] || { tier: :newbie, stars: 3, wins: 0, losses: 0 }
+  Seeds::RatingHelpers.upsert_player_rank!(user, **profile, now: now)
 end
 
 puts "Ranks: #{Rank.count}"
@@ -692,6 +694,11 @@ extra_hn_titles = [
   puts "Extra HN ##{i + 1} (id=#{g.id})"
 end
 
+# ── Sync global ratings (host skill on participations + W/L → displayed tier) ──
+Seeds::RatingHelpers.apply_host_skills_from_profiles!(RANK_PROFILES)
+Seeds::RatingHelpers.sync_all_global_ratings!
+puts "Synced global ratings for #{User.joins(:rank).count} players"
+
 # ── Summary ─────────────────────────────────────────────────────
 puts ''
 puts '=== Seed Summary ==='
@@ -704,6 +711,11 @@ puts '=== Test Accounts ==='
 puts 'Email: t16021999@gmail.com   Pass: 123123123    (Tân Admin - host Game J 16 người)'
 puts 'Email: player1@example.com   Pass: password123   (Tân - host Game A, B, F, I)'
 puts 'Email: player2@example.com   Pass: password123   (Minh - host Game C)'
+puts ''
+puts '=== Rating (seed) ==='
+puts 'Declared skill = tier + stars (Rank.rating_from_tier_and_stars)'
+puts 'Global rank = avg(host-rated base) + 10×W − 7×L (see Users::GlobalRatingCalculator)'
+puts "Example player1: declared #{Rank.rating_from_tier_and_stars(:advanced, 4)} pts (advanced 4★)"
 puts ''
 puts '=== Games (HCM) ==='
 puts "Game A (id=#{game_a.id}): Doubles ONGOING, 4 người, 2 matches"

@@ -17,11 +17,19 @@ module Matches
       end
       return failure('Match is already finished') if @match.finished?
 
-      has_scores = @score_a.present? && @score_b.present?
+      has_scores = !@score_a.nil? && !@score_b.nil?
+      winner_only = @winner_team.present? && !has_scores
       participants_data = []
 
       ActiveRecord::Base.transaction do
-        if has_scores
+        if winner_only
+          @match.update!(
+            winner_team: @winner_team,
+            status: :finished,
+            finished_at: Time.current
+          )
+          update_participations_and_ratings!(participants_data)
+        elsif has_scores
           return failure('Scores must be between 0 and 99') unless valid_scores?
 
           determine_winner! if @winner_team.blank?

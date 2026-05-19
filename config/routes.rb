@@ -48,14 +48,21 @@ Rails.application.routes.draw do
         resources :placeholders, only: %i[create update destroy], controller: 'placeholders'
 
         resources :matches, only: %i[index create update destroy], controller: 'matches' do
+          collection do
+            post :generate_batch
+          end
           member do
             post :start
             post :finish
+            post :undo_finish
+            post :priority
           end
         end
       end
     end
   end
+
+  mount ActionCable.server => '/cable'
 
   get 'up' => 'rails/health#show', as: :rails_health_check
 

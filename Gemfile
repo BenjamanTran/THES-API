@@ -21,6 +21,9 @@ gem 'tzinfo-data', platforms: %i[windows jruby]
 gem 'solid_cache', group: :production
 gem 'solid_cable', group: :production
 
+# Action Cable adapter
+gem 'redis', '>= 4.0.1'
+
 # Background jobs
 gem 'sidekiq'
 gem 'sidekiq-cron'

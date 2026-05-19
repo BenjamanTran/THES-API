@@ -34,7 +34,7 @@ class Game < ApplicationRecord
       .distinct
   }
 
-  before_create :generate_invite_code
+  before_create :generate_invite_code, :generate_edit_token
 
   validates :status, presence: true
   validates :match_type, presence: true
@@ -47,8 +47,24 @@ class Game < ApplicationRecord
   validate :time_range_valid
   validate :price_range_valid
 
+  def valid_edit_token?(token)
+    token.present? && edit_token.present? &&
+      ActiveSupport::SecurityUtils.secure_compare(edit_token, token.to_s)
+  end
+
+  def can_manage?(user: nil, edit_token: nil)
+    return true if valid_edit_token?(edit_token)
+    return false unless user
+
+    host_or_co_host?(user)
+  end
+
   def host_or_co_host?(user)
-    host_id == user.id || game_participations.exists?(user_id: user.id, role: :co_host)
+    return false unless user
+
+    return true if host_id == user.id
+
+    game_participations.co_host.exists?(user_id: user.id)
   end
 
   def within_play_time?(at: Time.current)
@@ -104,6 +120,14 @@ class Game < ApplicationRecord
       loop do
         code = SecureRandom.alphanumeric(8).downcase
         break code unless Game.exists?(invite_code: code)
+      end
+  end
+
+  def generate_edit_token
+    self.edit_token ||=
+      loop do
+        token = SecureRandom.urlsafe_base64(24)
+        break token unless Game.exists?(edit_token: token)
       end
   end
 end

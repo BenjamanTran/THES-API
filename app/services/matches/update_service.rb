@@ -2,10 +2,11 @@
 
 module Matches
   class UpdateService < ApplicationService
-    def initialize(user:, game:, match:, params:)
+    def initialize(user:, game:, match:, params:, edit_token: nil)
       @user = user
       @game = game
       @match = match
+      @edit_token = edit_token
       @team_a_ids = Array(params[:team_a]).map(&:to_i)
       @team_b_ids = Array(params[:team_b]).map(&:to_i)
     end

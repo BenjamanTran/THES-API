@@ -12,4 +12,5 @@ class Match < ApplicationRecord
                            numericality: { greater_than: 0 }
 
   scope :ordered, -> { order(:match_number) }
+  scope :priority_first, -> { order(priority: :desc, match_number: :asc) }
 end

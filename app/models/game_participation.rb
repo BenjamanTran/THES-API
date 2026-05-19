@@ -16,10 +16,6 @@ class GameParticipation < ApplicationRecord
   validates :user_id, uniqueness: { scope: :game_id }
   validates :host_rated_stars, inclusion: { in: 1..5 }, allow_nil: true
   validates :host_rating_note, length: { maximum: 200 }, allow_nil: true
-  validate :max_co_hosts, if: :co_host?
-
-  MAX_CO_HOSTS = 4
-
   HOST_TIER_MAP = {
     'newbie' => :hr_newbie, 'beginner_plus' => :hr_beginner_plus,
     'lower_intermediate' => :hr_lower_intermediate, 'intermediate' => :hr_intermediate,
@@ -33,12 +29,4 @@ class GameParticipation < ApplicationRecord
     REVERSE_TIER_MAP[host_rated_tier&.to_sym]
   end
 
-  private
-
-  def max_co_hosts
-    count = game.game_participations.co_host.where.not(id: id).count
-    return unless count >= MAX_CO_HOSTS
-
-    errors.add(:role, "maximum #{MAX_CO_HOSTS} co-hosts per game")
-  end
 end

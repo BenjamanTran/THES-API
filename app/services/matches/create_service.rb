@@ -2,15 +2,16 @@
 
 module Matches
   class CreateService < ApplicationService
-    def initialize(user:, game:, params:)
+    def initialize(user:, game:, params:, edit_token: nil)
       @user = user
       @game = game
+      @edit_token = edit_token
       @team_a_ids = Array(params[:team_a]).map(&:to_i)
       @team_b_ids = Array(params[:team_b]).map(&:to_i)
     end
 
     def call
-      return failure('Only host or co-host can create matches', :forbidden) unless @game.host_or_co_host?(@user)
+      return failure('Forbidden', :forbidden) unless @game.can_manage?(user: @user, edit_token: @edit_token)
       return failure('Game is not active') if @game.finished? || @game.cancelled?
       return failure('Not enough players for a match') unless enough_players?
 

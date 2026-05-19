@@ -147,8 +147,7 @@ module Api
       private
 
       def set_game
-        @game = Game.includes(:host, game_participations: { user: :rank },
-                              matches: { match_participations: { user: :rank } }).find(params[:id])
+        @game = Game.includes(:host, game_participations: { user: :rank }).find(params[:id])
       rescue ActiveRecord::RecordNotFound
         render json: { error: 'Game not found' }, status: :not_found
       end
@@ -232,10 +231,43 @@ module Api
                             :description, :title, :min_tier, :max_tier, :courts,
                             :min_price, :max_price, :invite_code)
         detail[:host] = { id: game.host&.id, name: game.host&.name }
-        detail[:players] = game.game_participations.map { |gp| player_payload(gp) }
+        session_stats = session_match_stats_for_game(game)
+        detail[:players] = game.game_participations.map { |gp| player_payload(gp, session_stats[gp.user_id]) }
         detail[:fit_level] = game.fit_level(@current_user) if @current_user
-        detail[:matches] = game.matches.sort_by(&:match_number).map { |m| match_summary(m) }
+        detail[:match_counts] = match_counts_for_game(game)
+        live_matches = game.matches
+                             .where(status: %i[ongoing pending])
+                             .includes(match_participations: { user: :rank })
+                             .order(status: :desc, match_number: :asc)
+        detail[:matches] = live_matches.map { |m| match_summary(m) }
+        priority = live_matches.find(&:priority?)
+        detail[:priority_match] = priority ? match_summary(priority) : nil
         detail
+      end
+
+      def match_counts_for_game(game)
+        counts = game.matches.group(:status).count
+        {
+          pending: counts['pending'] || counts[0] || 0,
+          ongoing: counts['ongoing'] || counts[1] || 0,
+          finished: counts['finished'] || counts[2] || 0
+        }
+      end
+
+      def session_match_stats_for_game(game)
+        rows = MatchParticipation.joins(:match)
+                                 .where(matches: { game_id: game.id, status: Match.statuses[:finished] })
+                                 .group(:user_id)
+                                 .pluck(
+                                   :user_id,
+                                   Arel.sql('COUNT(*)'),
+                                   Arel.sql('SUM(CASE WHEN match_participations.winner THEN 1 ELSE 0 END)')
+                                 )
+        rows.each_with_object({}) do |(user_id, played, wins), acc|
+          wins_i = wins.to_i
+          played_i = played.to_i
+          acc[user_id] = { played: played_i, wins: wins_i, losses: played_i - wins_i }
+        end
       end
 
       def match_summary(match)
@@ -246,6 +278,7 @@ module Api
           team_a_score: match.team_a_score,
           team_b_score: match.team_b_score,
           winner_team: match.winner_team,
+          priority: match.priority,
           team_a: match.match_participations.select(&:team_a?).map { |mp| match_player(mp) },
           team_b: match.match_participations.select(&:team_b?).map { |mp| match_player(mp) }
         }
@@ -254,11 +287,11 @@ module Api
       def match_player(mp)
         user = mp.user
         entry = { id: user.id, name: user.name, gender: user.gender }
-        entry[:rank] = game_player_rank_payload(user) if user.rank
+        entry[:rank] = game_player_rank_stored(user) if user.rank
         entry
       end
 
-      def player_payload(participation)
+      def player_payload(participation, session_stats = nil)
         user = participation.user
         payload = {
           id: user.id,
@@ -268,7 +301,7 @@ module Api
           placeholder: user.placeholder?
         }
         if user.rank
-          payload[:rank] = game_player_rank_payload(user)
+          payload[:rank] = game_player_rank_stored(user)
           payload[:declared_rank] = declared_rank_payload(user.rank) unless user.placeholder?
         end
         if participation.host_rated_tier.present?
@@ -276,6 +309,7 @@ module Api
           payload[:host_rated_stars] = participation.host_rated_stars
           payload[:host_rating_note] = participation.host_rating_note
         end
+        payload[:session_matches] = session_stats if session_stats.present?
         payload
       end
     end

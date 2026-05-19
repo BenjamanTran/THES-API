@@ -151,10 +151,31 @@ module Api
         )
       end
 
-      def game_player_rank_payload(user)
+      def game_player_rank_payload(user, computed: true)
         return unless user.rank
 
-        user.placeholder? ? placeholder_rank_payload(user.rank) : rank_payload(user.rank)
+        if computed && !user.placeholder?
+          rank_payload(user.rank)
+        else
+          game_player_rank_stored(user)
+        end
+      end
+
+      # Game/match screens: use persisted rank (avoids N× GlobalRatingCalculator queries).
+      def game_player_rank_stored(user)
+        return unless user.rank
+
+        rank = user.rank
+        if user.placeholder?
+          placeholder_rank_payload(rank)
+        else
+          tier_key = rank.tier
+          rank.slice(:wins, :losses, :matches_count, :division).merge(
+            tier: tier_key.to_s,
+            rating: rank.rating,
+            display_name: I18n.t("ranks.#{tier_key}")
+          )
+        end
       end
     end
   end
