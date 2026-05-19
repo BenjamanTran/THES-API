@@ -71,9 +71,7 @@ module Games
 
     def fallback_query
       scope = Game.includes(:host)
-                  .where(end_time: Time.current..)
-                  .where.not(status: :cancelled)
-
+      scope = apply_time_scope(scope)
       scope = apply_status_filter(scope)
       scope = apply_match_type_filter(scope)
       scope = apply_tier_filter(scope)
@@ -83,6 +81,19 @@ module Games
       scope = apply_sort(scope)
 
       scope.page(fallback_page).per(fallback_per_page)
+    end
+
+    def apply_time_scope(scope)
+      case @params[:time_scope].to_s
+      when 'discover'
+        finished = Game.statuses[:finished]
+        scope.where.not(status: :cancelled)
+             .where('games.end_time >= ? OR games.status = ?', Time.current, finished)
+      when 'active'
+        scope.where(end_time: Time.current..).where.not(status: :cancelled)
+      else
+        scope.where(end_time: Time.current..).where.not(status: :cancelled)
+      end
     end
 
     def apply_status_filter(scope)
@@ -108,7 +119,11 @@ module Games
     def apply_not_full_filter(scope)
       return scope unless ActiveModel::Type::Boolean.new.cast(@params[:not_full])
 
-      scope.where('players_count < max_players')
+      finished = Game.statuses[:finished]
+      scope.where(
+        '(games.status = ?) OR (players_count < max_players AND games.status != ?)',
+        finished, finished
+      )
     end
 
     def apply_price_filter(scope)
@@ -122,6 +137,8 @@ module Games
     end
 
     def apply_sort(scope)
+      return apply_discover_sort(scope) if @params[:time_scope].to_s == 'discover'
+
       case @params[:sort].to_s
       when 'start_time_asc' then scope.order(start_time: :asc)
       when 'created_at_asc' then scope.order(created_at: :asc)
@@ -131,6 +148,25 @@ module Games
         else
           scope.order(created_at: :desc)
         end
+      end
+    end
+
+    def apply_discover_sort(scope)
+      finished = Game.statuses[:finished]
+      group_order = Arel.sql("CASE WHEN games.status = #{finished} THEN 1 ELSE 0 END")
+      if @query_builder.location_provided?
+        scope.order(
+          group_order,
+          Arel.sql('distance_km ASC'),
+          Arel.sql("CASE WHEN games.status = #{finished} THEN games.end_time END DESC"),
+          start_time: :asc
+        )
+      else
+        scope.order(
+          group_order,
+          Arel.sql("CASE WHEN games.status != #{finished} THEN games.start_time END ASC"),
+          Arel.sql("CASE WHEN games.status = #{finished} THEN games.end_time END DESC")
+        )
       end
     end
 

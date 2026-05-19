@@ -16,7 +16,20 @@ class GameChannel < ApplicationCable::Channel
   private
 
   def can_view_game?(game)
+    return member_view?(game) if current_user
+
+    invite_spectator_view?(game)
+  end
+
+  def member_view?(game)
     game.host_id == current_user.id ||
       game.game_participations.exists?(user_id: current_user.id)
+  end
+
+  def invite_spectator_view?(game)
+    return false unless game.spectator_viewable?
+
+    code = params[:invite_code].to_s
+    game.valid_invite_code?(code)
   end
 end

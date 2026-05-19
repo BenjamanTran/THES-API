@@ -166,7 +166,7 @@ module Api
       end
 
       def search_params
-        params.permit(:lat, :lng, :radius, :tier, :from_time, :status,
+        params.permit(:lat, :lng, :radius, :tier, :from_time, :status, :time_scope,
                       :page, :per_page, :sort, :not_full, :match_type, :price_max).to_h.symbolize_keys
       end
 

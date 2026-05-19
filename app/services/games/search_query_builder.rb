@@ -11,7 +11,7 @@ module Games
     end
 
     def build
-      {
+      body = {
         query: {
           function_score: {
             query: { bool: { filter: build_filters } },
@@ -23,6 +23,12 @@ module Games
         size: page_size,
         from: offset
       }
+      body[:sort] = discover_sort if discover_scope?
+      body
+    end
+
+    def discover_scope?
+      @params[:time_scope].to_s == 'discover'
     end
 
     def location_provided?
@@ -48,7 +54,39 @@ module Games
     end
 
     def time_filter
-      { range: { start_time: { gte: @params[:from_time] || 'now' } } }
+      case @params[:time_scope].to_s
+      when 'active'
+        { range: { end_time: { gte: 'now' } } }
+      when 'discover'
+        {
+          bool: {
+            must_not: [{ term: { status: 'cancelled' } }],
+            should: [
+              { range: { end_time: { gte: 'now' } } },
+              { term: { status: 'finished' } }
+            ],
+            minimum_should_match: 1
+          }
+        }
+      else
+        { range: { start_time: { gte: @params[:from_time] || 'now' } } }
+      end
+    end
+
+    def discover_sort
+      [
+        {
+          _script: {
+            type: 'number',
+            order: 'asc',
+            script: {
+              source: "doc['status.keyword'].size() > 0 && doc['status.keyword'].value == 'finished' ? 1 : 0"
+            }
+          }
+        },
+        { start_time: { order: 'asc', missing: '_last' } },
+        { end_time: { order: 'desc', missing: '_last' } }
+      ]
     end
 
     def status_filter

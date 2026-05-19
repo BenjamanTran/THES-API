@@ -52,15 +52,9 @@ module Api
         !@game.finished? && !@game.cancelled? && @game.players_count < @game.max_players
       end
 
-      def session_started?
-        @game.ongoing? ||
-          Time.current >= @game.start_time ||
-          @game.matches.where(status: %i[ongoing pending]).exists?
-      end
-
       def invite_mode
         return 'closed' if @game.cancelled? || @game.finished?
-        return 'live' if session_started?
+        return 'live' if @game.session_started?
 
         'join'
       end

@@ -74,6 +74,21 @@ class Game < ApplicationRecord
     at >= start_time && at <= end_time
   end
 
+  def session_started?
+    ongoing? ||
+      Time.current >= start_time ||
+      matches.where(status: %i[ongoing pending]).exists?
+  end
+
+  def spectator_viewable?
+    !finished? && !cancelled? && session_started?
+  end
+
+  def valid_invite_code?(code)
+    code.present? && invite_code.present? &&
+      ActiveSupport::SecurityUtils.secure_compare(invite_code, code.to_s)
+  end
+
   def fit_level(user)
     return unless user&.rank
 

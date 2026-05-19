@@ -11,10 +11,7 @@ module ApplicationCable
     private
 
     def find_verified_user
-      user = user_from_cookie || user_from_dev_header
-      reject_unauthorized_connection unless user
-
-      user
+      user_from_cookie || user_from_dev_header
     end
 
     def user_from_cookie
