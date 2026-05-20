@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_19_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_20_120000) do
   create_table "game_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "game_id", null: false
@@ -33,6 +33,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_19_120000) do
     t.json "courts"
     t.datetime "created_at", null: false
     t.text "description"
+    t.string "edit_token", limit: 64
     t.datetime "end_time"
     t.bigint "host_id"
     t.string "invite_code", limit: 12
@@ -52,6 +53,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_19_120000) do
     t.string "title", limit: 100
     t.datetime "updated_at", null: false
     t.bigint "venue_id"
+    t.index ["edit_token"], name: "index_games_on_edit_token", unique: true
     t.index ["host_id"], name: "index_games_on_host_id"
     t.index ["invite_code"], name: "index_games_on_invite_code", unique: true
     t.index ["min_price"], name: "index_games_on_min_price"
@@ -119,6 +121,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_19_120000) do
   end
 
   create_table "users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "avatar_key"
+    t.string "avatar_url"
     t.datetime "created_at", null: false
     t.string "email"
     t.string "email_verification_digest"

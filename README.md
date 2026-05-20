@@ -48,8 +48,21 @@ CI templates for GCP live under `api/` in THE_S for convenience: **copy** `cloud
      --repo-owner=YOUR_ORG_OR_USER \
      --branch-pattern="^staging$" \
      --build-config=cloudbuild.staging.yaml \
-     --substitutions=_REGION=asia-southeast1,_AR_REPOSITORY=the-s-api-staging,_DEPLOY=false,_GCE_INSTANCE=,_GCE_ZONE=asia-southeast1-a
+     --substitutions=_REGION=asia-southeast1,_AR_REPOSITORY=the-s-api-staging,_DEPLOY=false,_GCE_INSTANCE=,_GCE_ZONE=asia-southeast1-a,_GCS_MEDIA_BUCKET=the-s-staging-media88,_GCS_PROJECT_ID=YOUR_PROJECT_ID,_API_PUBLIC_URL=https://api.example.com,_FE_ORIGIN=https://fe.example.com
    ```
+
+   **Avatar / GCS substitutions (API trigger):**
+
+   | Substitution | Example | Notes |
+   |--------------|---------|--------|
+   | `_GCS_MEDIA_BUCKET` | `the-s-staging-media88` | Private bucket; API proxies `/avatars/...` |
+   | `_GCS_PROJECT_ID` | `test-496207` | GCP project id |
+   | `_API_PUBLIC_URL` | `https://api.example.com` | Public API base (avatar URLs) |
+   | `_FE_ORIGIN` | `https://app.example.com` | CORS |
+
+   Do **not** set `_GOOGLE_APPLICATION_CREDENTIALS` in Cloud Build — org policy blocks SA keys. On **GKE**, use Workload Identity (`roles/storage.objectAdmin` on bucket). On **GCE**, use the VM / runtime service account.
+
+   **GKE:** put the same keys in Terraform `k8s_configmap_data` (not only trigger substitutions). Re-`terraform apply` after changing ConfigMap.
 
 5. **Deploy on GCE:** Cloud Build’s **`deploy-gce`** step runs the deploy commands over IAP SSH (no `/opt/the_s/*.sh` required). For **manual** deploys from your laptop, you can still copy `script/gcp_staging_deploy_on_vm.sh` to the VM (e.g. `/opt/the_s/`), `chmod +x`, and run it with the same four arguments. Configure **`/etc/the_s/api-staging.env`** on the VM for Rails/DB (see script comments). Set trigger substitutions `_DEPLOY=true`, `_GCE_INSTANCE`, `_GCE_ZONE` when ready.
 

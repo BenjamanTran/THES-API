@@ -83,3 +83,19 @@ ELASTICSEARCH_ENABLED=true bundle exec rake elasticsearch:drop     # Delete all 
 ## Environment variables
 
 See `.env.example` for required vars: `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `ELASTICSEARCH_URL`, `ELASTICSEARCH_ENABLED`, `FE_ORIGIN`.
+
+### GCS avatars (optional)
+
+| Variable | Description |
+|----------|-------------|
+| `GCS_MEDIA_BUCKET` | Bucket name; unset → local `public/avatars/` |
+| `GCS_PROJECT_ID` | GCP project (optional if inferrable from credentials) |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to SA JSON (local/Docker). Omit on GKE/Cloud Run with Workload Identity |
+
+Local setup: copy `config/gcs/service-account.json.example` → `config/gcs/service-account.json`, add to `.env`:
+
+```
+GCS_MEDIA_BUCKET=your-bucket
+GCS_PROJECT_ID=your-project
+GOOGLE_APPLICATION_CREDENTIALS=config/gcs/service-account.json
+```

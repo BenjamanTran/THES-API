@@ -26,6 +26,8 @@ Rails.application.routes.draw do
       get    '/me',      to: 'me#show'
       patch  '/me',      to: 'profile#update'
       put    '/me',      to: 'profile#update'
+      post   '/me/avatar', to: 'avatars#create'
+      delete '/me/avatar', to: 'avatars#destroy'
 
       resources :venues, only: %i[index create]
 
@@ -64,6 +66,9 @@ Rails.application.routes.draw do
   end
 
   mount ActionCable.server => '/cable'
+
+  get '/avatars/:user_id/:filename', to: 'avatars#show',
+      constraints: { user_id: /\d+/, filename: /[^\/]+/ }
 
   get 'up' => 'rails/health#show', as: :rails_health_check
 

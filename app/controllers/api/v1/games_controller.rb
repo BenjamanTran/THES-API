@@ -286,7 +286,7 @@ module Api
 
       def match_player(mp)
         user = mp.user
-        entry = { id: user.id, name: user.name, gender: user.gender }
+        entry = { id: user.id, name: user.name, gender: user.gender }.merge(player_avatar_fields(user))
         entry[:rank] = game_player_rank_stored(user) if user.rank
         entry
       end
@@ -299,7 +299,7 @@ module Api
           gender: user.gender,
           role: participation.role,
           placeholder: user.placeholder?
-        }
+        }.merge(player_avatar_fields(user))
         if user.rank
           payload[:rank] = game_player_rank_stored(user)
           payload[:declared_rank] = declared_rank_payload(user.rank) unless user.placeholder?

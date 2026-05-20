@@ -153,7 +153,7 @@ module Api
           name: user.name,
           gender: user.gender,
           session_matches: session_stats || { played: 0, wins: 0, losses: 0 }
-        }
+        }.merge(player_avatar_fields(user))
         payload[:rank] = game_player_rank_stored(user) if user.rank
         if participation.host_rated_tier.present?
           payload[:host_rated_tier] = participation.host_rated_tier_key

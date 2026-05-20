@@ -203,6 +203,7 @@ module Api
       def player_entry(mp_entry)
         user = mp_entry.user
         entry = { id: user.id, name: user.name, gender: user.gender, winner: mp_entry.winner }
+               .merge(player_avatar_fields(user))
         entry[:rank] = game_player_rank_payload(user) if user.rank
         entry
       end

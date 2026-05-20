@@ -96,9 +96,14 @@ module Api
       def user_payload(user)
         user.slice(:id, :email, :name, :gender, :phone, :guest).merge(
           email_verified: user.email_verified?,
+          avatar_url: Users::AvatarStorage.display_url_for(user),
           rank: rank_payload(user.rank),
           declared_rank: declared_rank_payload(user.rank)
         )
+      end
+
+      def player_avatar_fields(user)
+        { avatar_url: Users::AvatarStorage.display_url_for(user) }
       end
 
       def rank_payload(rank)

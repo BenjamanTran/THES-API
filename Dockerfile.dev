@@ -14,6 +14,7 @@ RUN apt-get update -qq && \
     curl \
     git \
     libyaml-dev \
+    libvips-dev \
   && rm -rf /var/lib/apt/lists/*
 
 COPY Gemfile Gemfile.lock ./
