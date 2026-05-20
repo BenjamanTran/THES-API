@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_20_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_20_130000) do
   create_table "game_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "game_id", null: false
@@ -76,6 +76,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_20_120000) do
   end
 
   create_table "matches", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.integer "court_number"
     t.datetime "created_at", null: false
     t.datetime "finished_at"
     t.bigint "game_id", null: false
@@ -87,6 +88,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_20_120000) do
     t.integer "team_b_score"
     t.datetime "updated_at", null: false
     t.string "winner_team"
+    t.index ["game_id", "court_number"], name: "index_matches_on_game_id_and_court_number"
     t.index ["game_id", "match_number"], name: "index_matches_on_game_id_and_match_number", unique: true
     t.index ["game_id", "priority"], name: "index_matches_on_game_id_and_priority"
     t.index ["game_id"], name: "index_matches_on_game_id"

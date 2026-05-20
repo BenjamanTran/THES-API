@@ -279,6 +279,7 @@ module Api
           team_b_score: match.team_b_score,
           winner_team: match.winner_team,
           priority: match.priority,
+          court_number: match.court_number,
           team_a: match.match_participations.select(&:team_a?).map { |mp| match_player(mp) },
           team_b: match.match_participations.select(&:team_b?).map { |mp| match_player(mp) }
         }

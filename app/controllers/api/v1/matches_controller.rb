@@ -69,8 +69,19 @@ module Api
           return render json: { error: 'Chưa tới giờ trận, không thể bắt đầu' }, status: :unprocessable_content
         end
 
-        @match.update!(status: :ongoing, started_at: Time.current, priority: false)
-        broadcast_match_event('match.started', @match)
+        court_number = Matches::AssignCourtService.call(game: @game, exclude_match_id: @match.id)
+        unless court_number
+          return render json: { error: 'Tất cả sân đang bận — kết thúc một trận trước' }, status: :unprocessable_content
+        end
+
+        @match.update!(
+          status: :ongoing,
+          started_at: Time.current,
+          priority: false,
+          court_number: court_number
+        )
+        Matches::AssignCourtService.backfill_ongoing!(@game)
+        broadcast_match_event('match.started', @match.reload)
         render json: match_payload(@match)
       end
 
@@ -195,6 +206,7 @@ module Api
           started_at: match.started_at,
           finished_at: match.finished_at,
           priority: match.priority,
+          court_number: match.court_number,
           team_a: team_a.map { |mp_entry| player_entry(mp_entry) },
           team_b: team_b.map { |mp_entry| player_entry(mp_entry) }
         }

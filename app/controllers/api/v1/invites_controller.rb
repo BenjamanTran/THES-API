@@ -79,6 +79,7 @@ module Api
             end_time: @game.end_time,
             location: @game.location,
             host_name: @game.host&.name,
+            courts: @game.courts,
             mode: mode
           }
         }
@@ -90,6 +91,8 @@ module Api
       def attach_invite_snapshot(payload)
         mode = payload[:game][:mode]
         game_id = @game.id
+
+        Matches::AssignCourtService.backfill_ongoing!(@game) if mode == 'live'
 
         participations = GameParticipation.where(game_id: game_id).includes(user: :rank).to_a
         session_stats = session_match_stats_for_game_id(game_id)
@@ -169,6 +172,7 @@ module Api
           match_number: match.match_number,
           status: match.status,
           priority: match.priority,
+          court_number: match.court_number,
           winner_team: match.winner_team,
           team_a_score: match.team_a_score,
           team_b_score: match.team_b_score,
@@ -178,7 +182,7 @@ module Api
       end
 
       def invite_match_player(mp)
-        { id: mp.user.id, name: mp.user.name }
+        { id: mp.user.id, name: mp.user.name }.merge(player_avatar_fields(mp.user))
       end
     end
   end
