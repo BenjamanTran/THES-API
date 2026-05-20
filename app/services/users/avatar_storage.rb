@@ -102,7 +102,8 @@ module Users
     end
 
     def self.gcs_bucket
-      storage_client.bucket ENV.fetch('GCS_MEDIA_BUCKET')
+      # skip_lookup: true avoids storage.buckets.get — Object Admin on the bucket is enough for objects.
+      storage_client.bucket ENV.fetch('GCS_MEDIA_BUCKET'), skip_lookup: true
     end
 
     def self.storage_client
