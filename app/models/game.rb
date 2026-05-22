@@ -84,6 +84,13 @@ class Game < ApplicationRecord
     !finished? && !cancelled? && session_started?
   end
 
+  # Scheduled window length (host start_time → end_time), used for play-time stats.
+  def duration_seconds
+    return 0 unless start_time && end_time
+
+    [(end_time - start_time).to_i, 0].max
+  end
+
   def valid_invite_code?(code)
     code.present? && invite_code.present? &&
       ActiveSupport::SecurityUtils.secure_compare(invite_code, code.to_s)

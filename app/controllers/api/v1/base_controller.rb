@@ -85,11 +85,15 @@ module Api
       end
 
       def auth_response(user)
-        user = user.reload if user.persisted?
+        if user.persisted?
+          Users::BackfillPlayTime.call(user: user)
+          user.reload
+        end
 
         {
           user: user_payload(user),
-          stats: Users::StatsPayload.call(user: user)
+          stats: Users::StatsPayload.call(user: user),
+          profile: Users::ProfilePayload.call(user: user)
         }
       end
 
@@ -110,7 +114,7 @@ module Api
         return unless rank
 
         computed = Users::GlobalRatingCalculator.call(user: rank.user)
-        rank.slice(:wins, :losses, :matches_count).merge(
+        rank.slice(:wins, :losses, :matches_count, :play_time_seconds).merge(
           tier: computed[:tier],
           division: computed[:division],
           rating: computed[:rating],

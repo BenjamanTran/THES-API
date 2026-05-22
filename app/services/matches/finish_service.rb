@@ -57,10 +57,18 @@ module Matches
 
       @match.reload
       @match.match_participations.includes(user: :rank).load
+      bust_profile_caches!
       success(match: @match, participants: participants_data)
     end
 
     private
+
+    def bust_profile_caches!
+      @match.match_participations.find_each do |mp|
+        Users::ProfileCache.bust_for_user!(mp.user_id)
+      end
+      Rails.cache.delete("users/#{@game.host_id}/stats/v2") if @game.host_id
+    end
 
     def valid_scores?
       @score_a.between?(0, 31) && @score_b.between?(0, 31)

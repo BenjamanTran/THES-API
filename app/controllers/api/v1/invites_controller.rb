@@ -32,8 +32,10 @@ module Api
           @game.game_participations.create!(user: user, team: team)
           @game.update!(players_count: @game.players_count + 1)
           @game.update!(status: :full) if @game.players_count >= @game.max_players
+          Users::CreditPlayTimeForJoin.call(game: @game, user: user)
         end
 
+        Users::ProfileCache.bust_for_user!(user.id)
         sign_in!(user)
         render json: { user: user_payload(user), game_id: @game.id }, status: :created
       rescue ActiveRecord::RecordInvalid => e

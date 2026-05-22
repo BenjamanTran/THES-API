@@ -24,8 +24,10 @@ module Games
       ActiveRecord::Base.transaction do
         game.save!
         game.game_participations.create!(user: @user, team: :team_a)
+        Users::CreditPlayTimeForJoin.call(game: game, user: @user)
       end
 
+      Users::ProfileCache.bust_for_user!(@user.id)
       success(game: game)
     rescue ActiveRecord::RecordInvalid => e
       failure(e.record.errors.full_messages)
@@ -63,13 +65,18 @@ module Games
         @game.game_participations.create!(user: @user, team: team)
         @game.update!(players_count: @game.players_count + 1)
         @game.update!(status: :full) if @game.players_count >= @game.max_players
+        Users::CreditPlayTimeForJoin.call(game: @game, user: @user)
       end
 
+      Users::ProfileCache.bust_for_user!(@user.id)
       success(warning: warning)
     end
 
     def cancel_game
       ActiveRecord::Base.transaction do
+        @game.game_participations.find_each do |gp|
+          Users::RevertPlayTimeOnLeave.call(game: @game, participation: gp)
+        end
         @game.update!(status: :cancelled)
         @game.game_participations.destroy_all
         @game.update!(players_count: 0)
@@ -78,6 +85,7 @@ module Games
 
     def remove_player(participation)
       ActiveRecord::Base.transaction do
+        Users::RevertPlayTimeOnLeave.call(game: @game, participation: participation)
         participation.destroy!
         @game.update!(players_count: @game.players_count - 1)
         @game.update!(status: :open) if @game.full?

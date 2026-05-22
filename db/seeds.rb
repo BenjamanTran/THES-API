@@ -376,7 +376,7 @@ game_j = create_game(
   start_time: now - 20.minutes, end_time: now + 3.hours,
   venue_id: v.id, lat: v.lat, lng: v.lng, location: "#{v.name} - #{v.address}",
   min_tier: :beginner_plus, max_tier: :advanced,
-  courts: [1, 2, 3, 4], min_price: 40_000, max_price: 60_000, players_count: 0
+  courts: [3, 4], min_price: 40_000, max_price: 60_000, players_count: 0
 )
 add_players(game_j, {
   admin => :team_a, u1 => :team_b, u2 => :team_a, u3 => :team_b,
