@@ -5,6 +5,7 @@ module Matches
     def initialize(user:, game:, params:, edit_token: nil)
       @user = user
       @game = game
+      @params = params
       @edit_token = edit_token
       @team_a_ids = Array(params[:team_a]).map(&:to_i)
       @team_b_ids = Array(params[:team_b]).map(&:to_i)
@@ -23,6 +24,14 @@ module Matches
       invalid = all_ids - participant_ids
       return failure("Players not in this game: #{invalid.join(', ')}") if invalid.any?
 
+      arranged_as_pairs = ActiveModel::Type::Boolean.new.cast(@params[:arranged_as_pairs])
+      if arranged_as_pairs
+        pair_error = Games::PlayerPairConstraint.validate_lineup!(@game, @team_a_ids, @team_b_ids)
+        return failure(pair_error) if pair_error
+        quota_error = Games::PlayerPairConstraint.validate_pair_quota!(@game, @team_a_ids, @team_b_ids)
+        return failure(quota_error) if quota_error
+      end
+
       next_number = (@game.matches.maximum(:match_number) || 0) + 1
 
       match = nil
@@ -34,6 +43,10 @@ module Matches
 
         @team_a_ids.each { |uid| match.match_participations.create!(user_id: uid, team: :team_a) }
         @team_b_ids.each { |uid| match.match_participations.create!(user_id: uid, team: :team_b) }
+        if arranged_as_pairs
+          involved = Games::PlayerPairConstraint.pairs_in_lineup(@game, @team_a_ids, @team_b_ids)
+          Games::PlayerPairConstraint.increment_pair_usage!(involved)
+        end
       end
 
       match.match_participations.includes(user: :rank).load

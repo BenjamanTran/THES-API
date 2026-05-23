@@ -21,7 +21,6 @@ module Matches
       scheduled = scheduled_counts
       participant_ids = @game.game_participations.pluck(:user_id)
       users = User.includes(:rank).where(id: participant_ids).index_by(&:id)
-
       created = []
       ActiveRecord::Base.transaction do
         @count.times do

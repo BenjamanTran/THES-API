@@ -19,7 +19,7 @@ module Api
       end
 
       def find_current_user
-        user_from_cookie || user_from_dev_header
+        user_from_cookie || user_from_token_header || user_from_dev_header
       end
 
       def user_from_cookie
@@ -30,6 +30,16 @@ module Api
         user = User.find_by(id: payload[:user_id])
         return unless user&.session_active?
         return unless user.session_token.present? && user.session_token == payload[:token]
+
+        user
+      end
+
+      def user_from_token_header
+        token = request.headers['X-Session-Token']
+        return if token.blank?
+
+        user = User.find_by(session_token: token)
+        return unless user&.session_active?
 
         user
       end
@@ -90,11 +100,13 @@ module Api
           user.reload
         end
 
-        {
+        resp = {
           user: user_payload(user),
           stats: Users::StatsPayload.call(user: user),
           profile: Users::ProfilePayload.call(user: user)
         }
+        resp[:session_token] = user.session_token if user.session_token.present?
+        resp
       end
 
       def user_payload(user)

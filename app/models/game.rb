@@ -5,6 +5,7 @@ class Game < ApplicationRecord
 
   has_many :game_participations, dependent: :destroy
   has_many :users, through: :game_participations
+  has_many :game_player_pairs, dependent: :destroy
   has_many :matches, dependent: :destroy
   belongs_to :host, class_name: 'User', optional: true
   belongs_to :venue, optional: true
@@ -82,6 +83,21 @@ class Game < ApplicationRecord
 
   def spectator_viewable?
     !finished? && !cancelled? && session_started?
+  end
+
+  def active_player_pairs
+    game_player_pairs.active_pairs
+  end
+
+  # At least one registered pair can still play a pair-arranged match (per-pair quota).
+  def can_arrange_pair_match?
+    return false unless doubles?
+
+    pairs = active_player_pairs
+    return false if pairs.empty?
+    return true if pair_matches_limit.nil?
+
+    pairs.any? { |p| !p.at_pair_match_limit?(self) }
   end
 
   # Scheduled window length (host start_time → end_time), used for play-time stats.

@@ -5,7 +5,8 @@ module Api
     class GamesController < BaseController
       skip_before_action :set_current_user, only: %i[index show search]
       before_action :set_current_user_optional, only: %i[index show search]
-      before_action :set_game, only: %i[show update join leave promote kick rate_player]
+      before_action :set_game, only: %i[update join leave promote kick rate_player]
+      before_action :set_game_with_pairs, only: %i[show]
 
       MAX_PER_PAGE = 50
       DEFAULT_PER_PAGE = 20
@@ -113,6 +114,7 @@ module Api
         end
 
         ActiveRecord::Base.transaction do
+          Games::PlayerPairConstraint.destroy_pairs_for_user!(@game, gp.user_id)
           gp.destroy!
           @game.update!(players_count: @game.players_count - 1)
           @game.update!(status: :open) if @game.full?
@@ -152,6 +154,12 @@ module Api
         render json: { error: 'Game not found' }, status: :not_found
       end
 
+      def set_game_with_pairs
+        @game = Game.includes(:host, :game_player_pairs, game_participations: { user: :rank }).find(params[:id])
+      rescue ActiveRecord::RecordNotFound
+        render json: { error: 'Game not found' }, status: :not_found
+      end
+
       def service(game: nil)
         Games::GameService.new(user: @current_user, game: game, params: game_params)
       end
@@ -162,7 +170,7 @@ module Api
       end
 
       def update_params
-        params.permit(:max_players, courts: []).to_h
+        params.permit(:max_players, :pair_matches_limit, courts: []).to_h
       end
 
       def search_params
@@ -242,7 +250,19 @@ module Api
         detail[:matches] = live_matches.map { |m| match_summary(m) }
         priority = live_matches.find(&:priority?)
         detail[:priority_match] = priority ? match_summary(priority) : nil
+        detail[:pair_matches_limit] = game.pair_matches_limit
+        detail[:player_pairs] = game.game_player_pairs.active_pairs.map { |p| player_pair_payload(p) }
         detail
+      end
+
+      def player_pair_payload(pair)
+        {
+          id: pair.id,
+          user_a_id: pair.user_a_id,
+          user_b_id: pair.user_b_id,
+          status: pair.status,
+          matches_used: pair.matches_used
+        }
       end
 
       def match_counts_for_game(game)

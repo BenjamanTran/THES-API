@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_21_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_23_150000) do
   create_table "game_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "game_id", null: false
@@ -28,6 +28,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_21_120000) do
     t.index ["game_id"], name: "index_game_participations_on_game_id"
     t.index ["user_id", "game_id"], name: "index_game_participations_on_user_id_and_game_id", unique: true
     t.index ["user_id"], name: "index_game_participations_on_user_id"
+  end
+
+  create_table "game_player_pairs", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.bigint "game_id", null: false
+    t.integer "matches_used", default: 0, null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_a_id", null: false
+    t.bigint "user_b_id", null: false
+    t.index ["created_by_id"], name: "fk_rails_96dc2aee27"
+    t.index ["game_id", "user_a_id", "user_b_id"], name: "index_game_player_pairs_on_game_and_users", unique: true
+    t.index ["game_id", "user_a_id"], name: "index_game_player_pairs_on_game_id_and_user_a_id"
+    t.index ["game_id", "user_b_id"], name: "index_game_player_pairs_on_game_id_and_user_b_id"
+    t.index ["game_id"], name: "index_game_player_pairs_on_game_id"
+    t.index ["user_a_id"], name: "fk_rails_bece239702"
+    t.index ["user_b_id"], name: "fk_rails_e3968ff0b3"
   end
 
   create_table "games", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -48,6 +66,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_21_120000) do
     t.integer "max_tier", default: 0, null: false
     t.integer "min_price", default: 0, null: false
     t.integer "min_tier", default: 0, null: false
+    t.integer "pair_matches_limit"
     t.integer "players_count", default: 0, null: false
     t.datetime "start_time"
     t.integer "status", default: 0, null: false
@@ -77,6 +96,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_21_120000) do
   end
 
   create_table "matches", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.boolean "auto_promote", default: false, null: false
     t.integer "court_number"
     t.datetime "created_at", null: false
     t.datetime "finished_at"
@@ -168,6 +188,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_21_120000) do
 
   add_foreign_key "game_participations", "games"
   add_foreign_key "game_participations", "users"
+  add_foreign_key "game_player_pairs", "games"
+  add_foreign_key "game_player_pairs", "users", column: "created_by_id"
+  add_foreign_key "game_player_pairs", "users", column: "user_a_id"
+  add_foreign_key "game_player_pairs", "users", column: "user_b_id"
   add_foreign_key "games", "users", column: "host_id"
   add_foreign_key "games", "venues"
   add_foreign_key "match_participations", "matches"

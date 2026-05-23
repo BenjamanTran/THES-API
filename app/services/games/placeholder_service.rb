@@ -65,6 +65,7 @@ module Games
       gp = @game.game_participations.find_by!(user: placeholder)
 
       ActiveRecord::Base.transaction do
+        Games::PlayerPairConstraint.destroy_pairs_for_user!(@game, gp.user_id)
         gp.destroy!
         @game.update!(players_count: [@game.players_count - 1, 0].max)
         @game.update!(status: :open) if @game.full? && !@game.ongoing? && @game.players_count < @game.max_players

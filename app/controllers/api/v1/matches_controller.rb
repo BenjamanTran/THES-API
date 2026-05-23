@@ -185,7 +185,7 @@ module Api
       end
 
       def create_params
-        params.permit(team_a: [], team_b: [])
+        params.permit(:arranged_as_pairs, team_a: [], team_b: [])
       end
 
       def finish_params

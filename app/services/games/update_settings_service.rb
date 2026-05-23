@@ -14,12 +14,15 @@ module Games
     def call
       return failure('Only host or co-host can update this game', :forbidden) unless @game.host_or_co_host?(@user)
       return failure('Cannot edit a finished or cancelled game') if @game.finished? || @game.cancelled?
-      return failure('Cannot edit while the game is ongoing') if @game.ongoing?
 
       attrs = build_attrs
       return attrs if attrs.is_a?(ServiceResult)
 
       return failure('No changes provided') if attrs.empty?
+
+      if @game.ongoing? && (attrs.keys - [:pair_matches_limit]).any?
+        return failure('Cannot edit while the game is ongoing')
+      end
 
       ActiveRecord::Base.transaction do
         @game.update!(attrs)
@@ -52,6 +55,21 @@ module Games
         return failure('Invalid court numbers') if courts.any? { |n| n < 1 || n > MAX_COURT_NUMBER }
 
         attrs[:courts] = courts
+      end
+
+      if @params.key?(:pair_matches_limit)
+        return failure('pair_matches_limit is only for doubles games') unless @game.doubles?
+
+        raw = @params[:pair_matches_limit]
+        if raw.nil? || raw == '' || raw.to_s == 'unlimited'
+          attrs[:pair_matches_limit] = nil
+        else
+          limit = raw.to_i
+          return failure('pair_matches_limit must be at least 1') if limit < 1
+          return failure('pair_matches_limit cannot exceed 99') if limit > 99
+
+          attrs[:pair_matches_limit] = limit
+        end
       end
 
       attrs

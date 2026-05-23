@@ -49,6 +49,7 @@ Rails.application.routes.draw do
         end
 
         resources :placeholders, only: %i[create update destroy], controller: 'placeholders'
+        resources :player_pairs, only: %i[create destroy], controller: 'player_pairs'
 
         resources :matches, only: %i[index create update destroy], controller: 'matches' do
           collection do
