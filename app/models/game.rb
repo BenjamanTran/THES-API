@@ -81,8 +81,13 @@ class Game < ApplicationRecord
       matches.where(status: %i[ongoing pending]).exists?
   end
 
+  # Invite link: live only when a match is actively being played.
+  def invite_play_live?
+    matches.where(status: :ongoing).exists?
+  end
+
   def spectator_viewable?
-    !finished? && !cancelled? && session_started?
+    !finished? && !cancelled? && invite_play_live?
   end
 
   def active_player_pairs

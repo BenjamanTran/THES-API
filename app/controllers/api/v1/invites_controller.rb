@@ -12,7 +12,7 @@ module Api
       end
 
       def join
-        return render json: { error: 'Trận đã bắt đầu — chỉ xem được lịch thi đấu' }, status: :unprocessable_content if @game.session_started?
+        return render json: { error: 'Trận đã bắt đầu — chỉ xem được lịch thi đấu' }, status: :unprocessable_content if @game.invite_play_live?
         return render json: { error: 'Game is not open for joining' }, status: :unprocessable_content unless joinable?
 
         user = nil
@@ -56,7 +56,7 @@ module Api
 
       def invite_mode
         return 'closed' if @game.cancelled? || @game.finished?
-        return 'live' if @game.session_started?
+        return 'live' if @game.invite_play_live?
 
         'join'
       end
