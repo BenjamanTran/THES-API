@@ -19,7 +19,7 @@ module Api
       private
 
       def registration_params
-        params.permit(:email, :name, :password, :password_confirmation)
+        params.permit(:email, :name, :password, :password_confirmation, :gender)
       end
     end
   end

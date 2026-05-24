@@ -5,7 +5,7 @@ module Api
     class GamesController < BaseController
       skip_before_action :set_current_user, only: %i[index show search]
       before_action :set_current_user_optional, only: %i[index show search]
-      before_action :set_game, only: %i[update join leave promote kick rate_player]
+      before_action :set_game, only: %i[update join leave promote kick rate_player update_player]
       before_action :set_game_with_pairs, only: %i[show]
 
       MAX_PER_PAGE = 50
@@ -141,6 +141,28 @@ module Api
         )
         Users::GlobalRatingCalculator.sync!(user: gp.user)
 
+        render json: player_payload(gp.reload)
+      rescue ActiveRecord::RecordInvalid => e
+        render json: { error: e.record.errors.full_messages.join(', ') }, status: :unprocessable_content
+      end
+
+      def update_player
+        unless @game.host_or_co_host?(@current_user)
+          return render json: { error: 'Only host or co-host can update players' }, status: :forbidden
+        end
+
+        gp = @game.game_participations.find_by(user_id: params[:user_id])
+        return render json: { error: 'Player not found in this game' }, status: :not_found unless gp
+        if gp.user.placeholder?
+          return render json: { error: 'Use placeholder edit instead' }, status: :unprocessable_content
+        end
+
+        gender = params[:gender]&.to_s
+        unless User.genders.key?(gender)
+          return render json: { error: 'Invalid gender' }, status: :unprocessable_content
+        end
+
+        gp.user.update!(gender: gender)
         render json: player_payload(gp.reload)
       rescue ActiveRecord::RecordInvalid => e
         render json: { error: e.record.errors.full_messages.join(', ') }, status: :unprocessable_content

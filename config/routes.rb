@@ -46,6 +46,7 @@ Rails.application.routes.draw do
           post :promote
           post :kick
           patch :rate_player
+          patch :update_player
         end
 
         resources :placeholders, only: %i[create update destroy], controller: 'placeholders'
