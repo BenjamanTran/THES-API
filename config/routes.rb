@@ -72,9 +72,7 @@ Rails.application.routes.draw do
 
   mount ActionCable.server => '/cable'
 
-  if Rails.env.local?
-    mount Split::Dashboard, at: '/split'
-  end
+  mount Split::Dashboard, at: '/split'
 
   get '/avatars/:user_id/:filename', to: 'avatars#show',
       constraints: { user_id: /\d+/, filename: %r{[^/]+} }

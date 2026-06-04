@@ -6,7 +6,7 @@ module Experiments
     EXPERIMENT = :game_detail_screen
     ALTERNATIVES = %w[legacy simple].freeze
 
-    def self.assign(controller, user)
+    def self.assign(controller, _user)
       forced = ENV.fetch('GAME_DETAIL_SCREEN_VARIANT', '').to_s.strip
       return forced if ALTERNATIVES.include?(forced)
 
