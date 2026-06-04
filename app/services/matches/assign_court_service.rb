@@ -18,7 +18,7 @@ module Matches
       (1..slots).to_a
     end
 
-    # Ongoing matches started before court_number existed — assign on read so invite/live views show sân.
+    # Ongoing matches without court_number — backfill on read so invite/live views show court labels.
     def self.backfill_ongoing!(game)
       game.matches.ongoing.where(court_number: nil).order(:match_number, :id).find_each do |match|
         court = call(game: game, exclude_match_id: match.id)

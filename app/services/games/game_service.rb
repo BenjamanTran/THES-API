@@ -84,9 +84,11 @@ module Games
     end
 
     def remove_player(participation)
+      user_id = participation.user_id
       ActiveRecord::Base.transaction do
         Users::RevertPlayTimeOnLeave.call(game: @game, participation: participation)
-        Games::PlayerPairConstraint.destroy_pairs_for_user!(@game, participation.user_id)
+        Games::PlayerPairConstraint.destroy_pairs_for_user!(@game, user_id)
+        Games::PendingMatchSync.remove_user!(@game, user_id)
         participation.destroy!
         @game.update!(players_count: @game.players_count - 1)
         @game.update!(status: :open) if @game.full?

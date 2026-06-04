@@ -20,9 +20,8 @@ module Matches
       return failure('Must have players on both teams') if @team_a_ids.empty? || @team_b_ids.empty?
       return failure('Duplicate player IDs') if all_ids.uniq.length != all_ids.length
 
-      participant_ids = @game.game_participations.pluck(:user_id)
-      invalid = all_ids - participant_ids
-      return failure("Players not in this game: #{invalid.join(', ')}") if invalid.any?
+      roster_error = Matches::RosterValidator.error_for_create(@game, all_ids)
+      return failure(roster_error) if roster_error
 
       arranged_as_pairs = ActiveModel::Type::Boolean.new.cast(@params[:arranged_as_pairs])
       if arranged_as_pairs
@@ -30,6 +29,11 @@ module Matches
         return failure(pair_error) if pair_error
         quota_error = Games::PlayerPairConstraint.validate_pair_quota!(@game, @team_a_ids, @team_b_ids)
         return failure(quota_error) if quota_error
+      end
+
+      if @game.pending_queue_full?
+        n = @game.configured_court_count
+        return failure("Hàng chờ đầy (#{n}/#{n}) — bắt đầu hoặc xóa trận chờ trước")
       end
 
       next_number = (@game.matches.maximum(:match_number) || 0) + 1

@@ -21,9 +21,8 @@ module Matches
       return failure('Must have players on both teams') if @team_a_ids.empty? || @team_b_ids.empty?
       return failure('Duplicate player IDs') if all_ids.uniq.length != all_ids.length
 
-      participant_ids = @game.game_participations.pluck(:user_id)
-      invalid = all_ids - participant_ids
-      return failure("Players not in this game: #{invalid.join(', ')}") if invalid.any?
+      roster_error = Matches::RosterValidator.error_for_create(@game, all_ids)
+      return failure(roster_error) if roster_error
 
       ActiveRecord::Base.transaction do
         @match.match_participations.destroy_all

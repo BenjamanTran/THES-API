@@ -55,6 +55,9 @@ gem 'rack-cors'
 # Pagination
 gem 'kaminari'
 
+# A/B testing (Redis-backed; used for game detail UI variants)
+gem 'split', require: 'split/dashboard'
+
 # Transactional email (Resend)
 gem 'resend'
 

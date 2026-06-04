@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Users
-  # Idempotent: cộng giờ cho mọi game đã join nhưng chưa credited (kể cả dữ liệu cũ).
+  # Idempotent: credit play time for all joined games not yet credited (including legacy rows).
   class BackfillPlayTime
     def self.call(user:)
       new(user: user).call

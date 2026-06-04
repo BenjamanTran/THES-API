@@ -10,8 +10,9 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_23_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_04_160000) do
   create_table "game_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.boolean "arrived_at_court", default: false, null: false
     t.datetime "created_at", null: false
     t.bigint "game_id", null: false
     t.integer "host_rated_stars"
@@ -21,6 +22,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_150000) do
     t.string "position"
     t.integer "role", default: 0, null: false
     t.integer "score"
+    t.integer "session_played_count", default: 0, null: false
     t.integer "team", default: 0, null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false

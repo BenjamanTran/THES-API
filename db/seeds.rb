@@ -6,8 +6,8 @@ puts 'Seeding...'
 now = Time.current
 
 # ── 1. Test Users ────────────────────────────────────────────────
-# Login: player1@example.com / password123  (dùng để test, là host)
-# Login: player2@example.com / password123  (join cùng trận)
+# Login: player1@example.com / password123  (test account, host)
+# Login: player2@example.com / password123  (join same games)
 # ...
 
 players = [
@@ -198,7 +198,7 @@ end
 
 # ========== HCM Games ==========
 
-# ─── Game A: Doubles, ONGOING, 4 players, host=Tân ───
+# ─── Game A: Doubles, ONGOING, 4 players, host=Tan ───
 v = venues['Galaxy Badminton Center']
 game_a = create_game(
   title: 'Giao lưu tối thứ 4', description: '[TEST] Doubles ongoing - đủ người',
@@ -254,7 +254,7 @@ game_c = create_game(
 add_players(game_c, { u2 => :team_a, u1 => :team_b, u5 => :team_a })
 puts "Game C (id=#{game_c.id})"
 
-# ─── Game D: Doubles, ONGOING, Tân ko join ───
+# ─── Game D: Doubles, ONGOING, host Tan not playing ───
 v = venues['Tân Bình Sports Center']
 game_d = create_game(
   title: 'Luyện tập buổi chiều', description: '[TEST] Doubles ongoing - Tân ko join',
@@ -277,7 +277,7 @@ if game_d.matches.empty?
 end
 puts "Game D (id=#{game_d.id})"
 
-# ─── Game E: Singles, OPEN, chờ đối thủ ───
+# ─── Game E: Singles, OPEN, waiting for opponent ───
 v = venues['Galaxy Badminton Center']
 game_e = create_game(
   description: '[TEST] Singles open - chờ đối thủ',
@@ -422,7 +422,7 @@ game_k = create_game(
 add_players(game_k, { u17 => :team_a, u18 => :team_b, u19 => :team_a, u20 => :team_b })
 puts "Game K (id=#{game_k.id})"
 
-# ─── Game L: Singles OPEN, Thủ Đức, host=Hoàng ───
+# ─── Game L: Singles OPEN, Thu Duc district, host=Hoang ───
 v = venues['Thủ Đức Badminton Arena']
 game_l = create_game(
   title: 'Singles Thủ Đức', description: '[TEST] Singles open Thủ Đức',
@@ -435,7 +435,7 @@ game_l = create_game(
 add_players(game_l, { u19 => :team_a })
 puts "Game L (id=#{game_l.id})"
 
-# ─── Game M: Doubles OPEN, Gò Vấp, host=Dũng, 6/8 ───
+# ─── Game M: Doubles OPEN, Go Vap district, host=Dung, 6/8 ───
 v = venues['Gò Vấp Sport Center']
 game_m = create_game(
   title: 'Giao lưu tối Gò Vấp', description: '[TEST] Doubles open Gò Vấp',
@@ -451,7 +451,7 @@ add_players(game_m, {
 })
 puts "Game M (id=#{game_m.id})"
 
-# ─── Game N: Doubles OPEN, Q2, host=Long, miễn phí ───
+# ─── Game N: Doubles OPEN, Q2, host=Long, free ───
 v = venues['Quận 2 Badminton']
 game_n = create_game(
   title: 'Doubles miễn phí Thảo Điền', description: '[TEST] Doubles free Q2',
@@ -464,7 +464,7 @@ game_n = create_game(
 add_players(game_n, { u23 => :team_a, u24 => :team_b })
 puts "Game N (id=#{game_n.id})"
 
-# ─── Game O: Singles OPEN, Tân Bình, host=Việt (semi-pro) ───
+# ─── Game O: Singles OPEN, Tan Binh district, host=Viet (semi-pro) ───
 v = venues['Tân Bình Sports Center']
 game_o = create_game(
   title: 'Singles trình cao Tân Bình', description: '[TEST] Singles semi-pro Tân Bình',
@@ -504,7 +504,7 @@ puts "Game P (id=#{game_p.id})"
 
 # ========== HN Games ==========
 
-# ─── Game Q: Doubles OPEN, Ba Đình, host=Cường ───
+# ─── Game Q: Doubles OPEN, Ba Dinh district, host=Cuong ───
 v = venues['Hà Nội Badminton Center']
 game_q = create_game(
   title: 'Doubles Ba Đình sáng mai', description: '[TEST] Doubles open HN Ba Đình',
@@ -517,7 +517,7 @@ game_q = create_game(
 add_players(game_q, { u29 => :team_a, u17 => :team_b })
 puts "Game Q (id=#{game_q.id})"
 
-# ─── Game R: Doubles OPEN, Cầu Giấy, host=Thanh ───
+# ─── Game R: Doubles OPEN, Cau Giay district, host=Thanh ───
 v = venues['Cầu Giấy Sports Club']
 game_r = create_game(
   title: 'Giao lưu Cầu Giấy', description: '[TEST] Doubles open HN Cầu Giấy',
@@ -530,7 +530,7 @@ game_r = create_game(
 add_players(game_r, { u18 => :team_a, u21 => :team_b, u24 => :team_a })
 puts "Game R (id=#{game_r.id})"
 
-# ─── Game S: Singles OPEN, Thanh Xuân, host=Phương ───
+# ─── Game S: Singles OPEN, Thanh Xuan district, host=Phuong ───
 v = venues['Thanh Xuân Badminton']
 game_s = create_game(
   title: 'Singles Thanh Xuân', description: '[TEST] Singles open HN Thanh Xuân',
@@ -543,7 +543,7 @@ game_s = create_game(
 add_players(game_s, { u30 => :team_a })
 puts "Game S (id=#{game_s.id})"
 
-# ─── Game T: Doubles ONGOING, Hoàn Kiếm, host=Trung ───
+# ─── Game T: Doubles ONGOING, Hoan Kiem district, host=Trung ───
 v = venues['Hoàn Kiếm Arena']
 game_t = create_game(
   title: 'Doubles đang chơi Hoàn Kiếm', description: '[TEST] Doubles ongoing HN Hoàn Kiếm',
@@ -564,7 +564,7 @@ if game_t.matches.empty?
 end
 puts "Game T (id=#{game_t.id})"
 
-# ─── Game U: Doubles OPEN, Long Biên, host=Hà ───
+# ─── Game U: Doubles OPEN, Long Bien district, host=Ha ───
 v = venues['Long Biên Sports Center']
 game_u = create_game(
   title: 'Doubles Long Biên cuối tuần', description: '[TEST] Doubles open HN Long Biên',
@@ -577,7 +577,7 @@ game_u = create_game(
 add_players(game_u, { u24 => :team_a })
 puts "Game U (id=#{game_u.id})"
 
-# ─── Game V: Doubles OPEN, Hà Đông ───
+# ─── Game V: Doubles OPEN, Ha Dong district ───
 v = venues['Hà Đông Badminton Club']
 game_v = create_game(
   title: 'Giao lưu Hà Đông', description: '[TEST] Doubles open HN Hà Đông',
@@ -590,7 +590,7 @@ game_v = create_game(
 add_players(game_v, { u19 => :team_a, u20 => :team_b, u26 => :team_a, u28 => :team_b, u22 => :team_a })
 puts "Game V (id=#{game_v.id})"
 
-# ─── Game W: Doubles OPEN, Đống Đa ───
+# ─── Game W: Doubles OPEN, Dong Da district ───
 v = venues['Đống Đa Badminton']
 game_w = create_game(
   title: 'Doubles tối Đống Đa', description: '[TEST] Doubles open HN Đống Đa',
@@ -603,7 +603,7 @@ game_w = create_game(
 add_players(game_w, { u27 => :team_a, u30 => :team_b })
 puts "Game W (id=#{game_w.id})"
 
-# ─── Game X: Doubles OPEN, Nam Từ Liêm ───
+# ─── Game X: Doubles OPEN, Nam Tu Liem district ───
 v = venues['Nam Từ Liêm Sports']
 game_x = create_game(
   title: 'Doubles Nam Từ Liêm', description: '[TEST] Doubles open HN Nam Từ Liêm',

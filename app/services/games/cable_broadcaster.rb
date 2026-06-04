@@ -15,7 +15,7 @@ module Games
         }
       )
     rescue StandardError => e
-      Rails.logger.warn("[CableBroadcaster] #{event} failed: #{e.message}")
+      Rails.logger.error("[CableBroadcaster] #{event} game=#{game.id} failed: #{e.class}: #{e.message}")
     end
   end
 end

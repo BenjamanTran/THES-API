@@ -1,0 +1,11 @@
+# A/B experiments for Split gem.
+# Alternatives: legacy = full game detail UI, simple = rotation MVP.
+# Adjust percent to change traffic (must sum to 100 per experiment).
+
+game_detail_screen:
+  resettable: false
+  alternatives:
+    - name: legacy
+      percent: 50
+    - name: simple
+      percent: 50

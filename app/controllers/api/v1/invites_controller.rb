@@ -97,10 +97,9 @@ module Api
         Matches::AssignCourtService.backfill_ongoing!(@game) if mode == 'live'
 
         participations = GameParticipation.where(game_id: game_id).includes(user: :rank).to_a
-        session_stats = session_match_stats_for_game_id(game_id)
 
         payload[:players] = participations
-          .map { |gp| invite_player_payload(gp, session_stats[gp.user_id]) }
+          .map { |gp| invite_player_payload(gp) }
           .sort_by { |p| p[:name].to_s.downcase }
         payload[:match_counts] = match_counts_for_game_id(game_id)
 
@@ -126,22 +125,6 @@ module Api
         end
       end
 
-      def session_match_stats_for_game_id(game_id)
-        rows = MatchParticipation.joins(:match)
-                                 .where(matches: { game_id: game_id, status: Match.statuses[:finished] })
-                                 .group(:user_id)
-                                 .pluck(
-                                   :user_id,
-                                   Arel.sql('COUNT(*)'),
-                                   Arel.sql('SUM(CASE WHEN match_participations.winner THEN 1 ELSE 0 END)')
-                                 )
-        rows.each_with_object({}) do |(user_id, played, wins), acc|
-          wins_i = wins.to_i
-          played_i = played.to_i
-          acc[user_id] = { played: played_i, wins: wins_i, losses: played_i - wins_i }
-        end
-      end
-
       def match_counts_for_game_id(game_id)
         counts = Match.where(game_id: game_id).group(:status).count
         {
@@ -151,13 +134,18 @@ module Api
         }
       end
 
-      def invite_player_payload(participation, session_stats)
+      def invite_player_payload(participation)
         user = participation.user
         payload = {
           id: user.id,
           name: user.name,
           gender: user.gender,
-          session_matches: session_stats || { played: 0, wins: 0, losses: 0 }
+          session_matches: {
+            played: participation.session_played_count,
+            wins: 0,
+            losses: 0
+          },
+          arrived_at_court: participation.arrived_at_court
         }.merge(player_avatar_fields(user))
         payload[:rank] = game_player_rank_stored(user) if user.rank
         if participation.host_rated_tier.present?

@@ -35,6 +35,35 @@ class Game < ApplicationRecord
       .distinct
   }
 
+  scope :managed_by, lambda { |user|
+    co_host = GameParticipation.roles[:co_host]
+    where(
+      <<~SQL.squish,
+        games.host_id = :uid OR EXISTS (
+          SELECT 1 FROM game_participations gp
+          WHERE gp.game_id = games.id AND gp.user_id = :uid AND gp.role = :co_host
+        )
+      SQL
+      uid: user.id, co_host: co_host
+    )
+  }
+
+  scope :manage_session_active, lambda {
+    ongoing_game = statuses[:ongoing]
+    ongoing_match = Match.statuses[:ongoing]
+    where.not(status: %i[finished cancelled])
+         .where(end_time: Time.current..)
+         .where(
+           <<~SQL.squish,
+             games.status = :ongoing_game OR EXISTS (
+               SELECT 1 FROM matches m
+               WHERE m.game_id = games.id AND m.status = :ongoing_match
+             )
+           SQL
+           ongoing_game: ongoing_game, ongoing_match: ongoing_match
+         )
+  }
+
   before_create :generate_invite_code, :generate_edit_token
 
   validates :status, presence: true
@@ -92,6 +121,15 @@ class Game < ApplicationRecord
 
   def active_player_pairs
     game_player_pairs.active_pairs
+  end
+
+  def configured_court_count
+    list = Array(courts).map(&:to_i).select(&:positive?).uniq
+    [list.length, 1].max
+  end
+
+  def pending_queue_full?
+    matches.pending.count >= configured_court_count
   end
 
   # At least one registered pair can still play a pair-arranged match (per-pair quota).

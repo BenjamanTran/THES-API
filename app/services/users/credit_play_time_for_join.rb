@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Users
-  # Cộng thời lượng game (start_time → end_time) một lần khi user join, không theo từng trận.
+  # Credit game window duration (start_time → end_time) once on join, not per match.
   class CreditPlayTimeForJoin
     def self.call(game:, user:)
       new(game: game, user: user).call

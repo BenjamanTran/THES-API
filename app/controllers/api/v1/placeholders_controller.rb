@@ -12,6 +12,7 @@ module Api
           params: placeholder_params
         ).create
         if result.success?
+          broadcast_game_refresh
           render json: player_payload(participation_for_player(result.data[:player].id)), status: :created
         else
           render json: { error: result.error }, status: result.status
@@ -25,6 +26,7 @@ module Api
           params: placeholder_params.merge(id: params[:id])
         ).update
         if result.success?
+          broadcast_game_refresh
           render json: player_payload(participation_for_player(result.data[:player].id))
         else
           render json: { error: result.error }, status: result.status
@@ -38,6 +40,7 @@ module Api
           params: { id: params[:id] }
         ).destroy
         if result.success?
+          broadcast_game_refresh
           render json: { status: 'deleted', user_id: params[:id].to_i }
         else
           render json: { error: result.error }, status: result.status
@@ -61,6 +64,10 @@ module Api
         source.permit(:name, :gender, :tier, :stars).to_h.symbolize_keys
       end
 
+      def broadcast_game_refresh
+        Games::CableBroadcaster.broadcast(game: @game.reload, event: 'game.refresh')
+      end
+
       def player_payload(participation)
         user = participation.user
         payload = {
@@ -68,7 +75,8 @@ module Api
           name: user.name,
           gender: user.gender,
           role: participation.role,
-          placeholder: true
+          placeholder: true,
+          arrived_at_court: participation.arrived_at_court
         }
         payload[:rank] = game_player_rank_payload(user) if user.rank
         payload

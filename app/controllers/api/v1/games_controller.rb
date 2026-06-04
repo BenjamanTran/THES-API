@@ -5,7 +5,8 @@ module Api
     class GamesController < BaseController
       skip_before_action :set_current_user, only: %i[index show search]
       before_action :set_current_user_optional, only: %i[index show search]
-      before_action :set_game, only: %i[update join leave promote kick rate_player update_player]
+      before_action :set_game,
+                    only: %i[update join leave promote kick rate_player update_player adjust_session_played toggle_arrived]
       before_action :set_game_with_pairs, only: %i[show]
 
       MAX_PER_PAGE = 50
@@ -26,19 +27,6 @@ module Api
         render json: game_detail(@game)
       end
 
-      def update
-        result = Games::UpdateSettingsService.call(
-          user: @current_user,
-          game: @game,
-          params: update_params
-        )
-        if result.success?
-          render json: game_detail(result.data[:game])
-        else
-          render json: { error: result.error }, status: result.status
-        end
-      end
-
       def create
         if @current_user.guest?
           return render json: { errors: ['Tài khoản khách không thể tạo trận'] }, status: :forbidden
@@ -55,9 +43,23 @@ module Api
         end
       end
 
+      def update
+        result = Games::UpdateSettingsService.call(
+          user: @current_user,
+          game: @game,
+          params: update_params
+        )
+        if result.success?
+          render json: game_detail(result.data[:game])
+        else
+          render json: { error: result.error }, status: result.status
+        end
+      end
+
       def join
         result = service(game: @game).join
         if result.success?
+          broadcast_game_refresh
           body = { status: 'joined' }
           body[:warning] = result.data[:warning] if result.data[:warning]
           render json: body, status: :ok
@@ -69,6 +71,7 @@ module Api
       def leave
         result = service(game: @game).leave
         if result.success?
+          broadcast_game_refresh
           render json: { status: 'left' }, status: :ok
         else
           render json: { error: result.error }, status: result.status
@@ -91,6 +94,7 @@ module Api
         new_role = gp.co_host? ? :player : :co_host
         gp.role = new_role
         if gp.save
+          broadcast_game_refresh
           render json: { user_id: gp.user_id, role: gp.role }
         else
           render json: { error: gp.errors.full_messages.join(', ') }, status: :unprocessable_content
@@ -113,14 +117,17 @@ module Api
           return render json: { error: 'Only the host can kick co-hosts' }, status: :forbidden
         end
 
+        user_id = gp.user_id
         ActiveRecord::Base.transaction do
-          Games::PlayerPairConstraint.destroy_pairs_for_user!(@game, gp.user_id)
+          Games::PlayerPairConstraint.destroy_pairs_for_user!(@game, user_id)
+          Games::PendingMatchSync.remove_user!(@game, user_id)
           gp.destroy!
           @game.update!(players_count: @game.players_count - 1)
           @game.update!(status: :open) if @game.full?
         end
 
-        render json: { status: 'kicked', user_id: params[:user_id].to_i }
+        broadcast_game_refresh
+        render json: { status: 'kicked', user_id: user_id }
       end
 
       def rate_player
@@ -141,6 +148,7 @@ module Api
         )
         Users::GlobalRatingCalculator.sync!(user: gp.user)
 
+        broadcast_game_refresh
         render json: player_payload(gp.reload)
       rescue ActiveRecord::RecordInvalid => e
         render json: { error: e.record.errors.full_messages.join(', ') }, status: :unprocessable_content
@@ -168,7 +176,54 @@ module Api
         render json: { error: e.record.errors.full_messages.join(', ') }, status: :unprocessable_content
       end
 
+      def toggle_arrived
+        arrived = ActiveModel::Type::Boolean.new.cast(params[:arrived])
+        result = Games::ToggleArrivedService.call(
+          user: @current_user,
+          game: @game,
+          target_user_id: params[:user_id],
+          arrived: arrived
+        )
+        if result.success?
+          participation = result.data[:participation]
+          player_json = player_payload(participation)
+          broadcast_game_refresh
+          render json: { player: player_json }
+        else
+          render json: { error: result.error }, status: result.status
+        end
+      end
+
+      def adjust_session_played
+        result = Games::AdjustSessionPlayedService.call(
+          user: @current_user,
+          game: @game,
+          target_user_id: params[:user_id],
+          delta: params[:delta]
+        )
+        if result.success?
+          participation = result.data[:participation]
+          player_json = player_payload(participation)
+          broadcast_player_session_played(player_json)
+          render json: { player: player_json }
+        else
+          render json: { error: result.error }, status: result.status
+        end
+      end
+
       private
+
+      def broadcast_game_refresh
+        Games::CableBroadcaster.broadcast(game: @game.reload, event: 'game.refresh')
+      end
+
+      def broadcast_player_session_played(player)
+        Games::CableBroadcaster.broadcast(
+          game: @game,
+          event: 'player.session_played',
+          payload: { player: player }
+        )
+      end
 
       def set_game
         @game = Game.includes(:host, game_participations: { user: :rank }).find(params[:id])
@@ -261,14 +316,13 @@ module Api
                             :description, :title, :min_tier, :max_tier, :courts,
                             :min_price, :max_price, :invite_code)
         detail[:host] = { id: game.host&.id, name: game.host&.name }
-        session_stats = session_match_stats_for_game(game)
-        detail[:players] = game.game_participations.map { |gp| player_payload(gp, session_stats[gp.user_id]) }
+        detail[:players] = game.game_participations.map { |gp| player_payload(gp) }
         detail[:fit_level] = game.fit_level(@current_user) if @current_user
         detail[:match_counts] = match_counts_for_game(game)
         live_matches = game.matches
-                             .where(status: %i[ongoing pending])
-                             .includes(match_participations: { user: :rank })
-                             .order(status: :desc, match_number: :asc)
+                           .where(status: %i[ongoing pending])
+                           .includes(match_participations: { user: :rank })
+                           .order(status: :desc, match_number: :asc)
         detail[:matches] = live_matches.map { |m| match_summary(m) }
         priority = live_matches.find(&:priority?)
         detail[:priority_match] = priority ? match_summary(priority) : nil
@@ -296,22 +350,6 @@ module Api
         }
       end
 
-      def session_match_stats_for_game(game)
-        rows = MatchParticipation.joins(:match)
-                                 .where(matches: { game_id: game.id, status: Match.statuses[:finished] })
-                                 .group(:user_id)
-                                 .pluck(
-                                   :user_id,
-                                   Arel.sql('COUNT(*)'),
-                                   Arel.sql('SUM(CASE WHEN match_participations.winner THEN 1 ELSE 0 END)')
-                                 )
-        rows.each_with_object({}) do |(user_id, played, wins), acc|
-          wins_i = wins.to_i
-          played_i = played.to_i
-          acc[user_id] = { played: played_i, wins: wins_i, losses: played_i - wins_i }
-        end
-      end
-
       def match_summary(match)
         {
           id: match.id,
@@ -334,14 +372,15 @@ module Api
         entry
       end
 
-      def player_payload(participation, session_stats = nil)
+      def player_payload(participation)
         user = participation.user
         payload = {
           id: user.id,
           name: user.name,
           gender: user.gender,
           role: participation.role,
-          placeholder: user.placeholder?
+          placeholder: user.placeholder?,
+          arrived_at_court: participation.arrived_at_court
         }.merge(player_avatar_fields(user))
         if user.rank
           payload[:rank] = game_player_rank_stored(user)
@@ -352,7 +391,11 @@ module Api
           payload[:host_rated_stars] = participation.host_rated_stars
           payload[:host_rating_note] = participation.host_rating_note
         end
-        payload[:session_matches] = session_stats if session_stats.present?
+        payload[:session_matches] = {
+          played: participation.session_played_count,
+          wins: 0,
+          losses: 0
+        }
         payload
       end
     end

@@ -13,6 +13,7 @@ module Api
           unless Match.statuses.key?(status)
             return render json: { error: 'Invalid status' }, status: :unprocessable_content
           end
+
           matches = matches.where(status: status)
         end
         render json: { matches: matches.map { |m| match_payload(m) } }
@@ -23,21 +24,6 @@ module Api
         if result.success?
           broadcast_match_event('match.created', result.data[:match])
           render json: match_payload(result.data[:match]), status: :created
-        else
-          render json: { error: result.error }, status: result.status
-        end
-      end
-
-      def generate_batch
-        result = Matches::GenerateBatchService.call(
-          user: @current_user,
-          game: @game,
-          count: params[:count]
-        )
-        if result.success?
-          matches = result.data[:matches]
-          matches.each { |m| broadcast_match_event('match.created', m) }
-          render json: { matches: matches.map { |m| match_payload(m) } }, status: :created
         else
           render json: { error: result.error }, status: result.status
         end
@@ -67,6 +53,11 @@ module Api
         end
         unless @game.within_play_time?
           return render json: { error: 'Chưa tới giờ trận, không thể bắt đầu' }, status: :unprocessable_content
+        end
+
+        roster_error = Matches::RosterValidator.error_for_start(@game, @match)
+        if roster_error
+          return render json: { error: roster_error }, status: :unprocessable_content
         end
 
         court_number = Matches::AssignCourtService.call(game: @game, exclude_match_id: @match.id)
@@ -131,7 +122,7 @@ module Api
           return render json: { error: 'Only host or co-host can delete matches' }, status: :forbidden
         end
         if @match.finished?
-          return render json: { error: 'Cannot delete a finished match' }, status: :unprocessable_entity
+          return render json: { error: 'Cannot delete a finished match' }, status: :unprocessable_content
         end
 
         match_id = @match.id
@@ -215,7 +206,7 @@ module Api
       def player_entry(mp_entry)
         user = mp_entry.user
         entry = { id: user.id, name: user.name, gender: user.gender, winner: mp_entry.winner }
-               .merge(player_avatar_fields(user))
+                .merge(player_avatar_fields(user))
         entry[:rank] = game_player_rank_payload(user) if user.rank
         entry
       end

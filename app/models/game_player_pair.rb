@@ -35,7 +35,7 @@ class GamePlayerPair < ApplicationRecord
   end
 
   def pair_matches_remaining(game)
-    return nil if game.pair_matches_limit.nil?
+    return if game.pair_matches_limit.nil?
 
     [game.pair_matches_limit - matches_used, 0].max
   end

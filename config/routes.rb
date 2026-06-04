@@ -24,6 +24,7 @@ Rails.application.routes.draw do
       post '/email_verifications/verify', to: 'email_verifications#verify'
       post '/email_verifications/resend', to: 'email_verifications#resend'
       get    '/me',              to: 'me#show'
+      get    '/experiments',     to: 'experiments#show'
       get    '/me/activity',     to: 'me#activity'
       patch  '/me',      to: 'profile#update'
       put    '/me',      to: 'profile#update'
@@ -47,6 +48,8 @@ Rails.application.routes.draw do
           post :kick
           patch :rate_player
           patch :update_player
+          patch 'players/:user_id/session_played', action: :adjust_session_played
+          patch 'players/:user_id/arrived', action: :toggle_arrived
         end
 
         resources :placeholders, only: %i[create update destroy], controller: 'placeholders'
@@ -54,7 +57,6 @@ Rails.application.routes.draw do
 
         resources :matches, only: %i[index create update destroy], controller: 'matches' do
           collection do
-            post :generate_batch
             delete :pending, action: :destroy_pending
           end
           member do
@@ -70,8 +72,12 @@ Rails.application.routes.draw do
 
   mount ActionCable.server => '/cable'
 
+  if Rails.env.local?
+    mount Split::Dashboard, at: '/split'
+  end
+
   get '/avatars/:user_id/:filename', to: 'avatars#show',
-      constraints: { user_id: /\d+/, filename: /[^\/]+/ }
+      constraints: { user_id: /\d+/, filename: %r{[^/]+} }
 
   get 'up' => 'rails/health#show', as: :rails_health_check
 

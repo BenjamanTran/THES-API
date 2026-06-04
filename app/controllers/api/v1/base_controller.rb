@@ -3,6 +3,8 @@
 module Api
   module V1
     class BaseController < ApplicationController
+      include Split::EncapsulatedHelper
+
       SESSION_COOKIE = :smashhub_session
 
       before_action :set_current_user
@@ -103,7 +105,9 @@ module Api
         resp = {
           user: user_payload(user),
           stats: Users::StatsPayload.call(user: user),
-          profile: Users::ProfilePayload.call(user: user)
+          profile: Users::ProfilePayload.call(user: user),
+          experiments: Experiments::Catalog.assign(self, user),
+          active_manage_game: Games::ActiveManageGame.call(user: user)
         }
         resp[:session_token] = user.session_token if user.session_token.present?
         resp
