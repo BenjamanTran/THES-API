@@ -258,7 +258,16 @@ module Api
       def filtered_games
         scope = base_filtered_scope
         scope = mine_scope(scope) if mine_filter?
-        scope.includes(:host).order(start_time: order_direction)
+        scope = scope.includes(:host)
+        apply_list_order(scope)
+      end
+
+      def apply_list_order(scope)
+        if mine_filter? && params[:time].to_s != 'past'
+          scope.order_active_first
+        else
+          scope.order(start_time: order_direction)
+        end
       end
 
       def base_filtered_scope

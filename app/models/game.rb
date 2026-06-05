@@ -29,6 +29,21 @@ class Game < ApplicationRecord
     tier_val = TIERS[tier]
     where('min_tier <= ? AND max_tier >= ?', tier_val, tier_val)
   }
+  # Mine / upcoming list: live sessions before scheduled, then by start time.
+  scope :order_active_first, lambda {
+    order(
+      Arel.sql(<<~SQL.squish),
+        CASE games.status
+          WHEN #{statuses[:ongoing]} THEN 0
+          WHEN #{statuses[:open]} THEN 1
+          WHEN #{statuses[:full]} THEN 2
+          ELSE 3
+        END ASC
+      SQL
+      start_time: :asc
+    )
+  }
+
   scope :hosted_or_joined_by, lambda { |user|
     left_joins(:game_participations)
       .where('games.host_id = :uid OR game_participations.user_id = :uid', uid: user.id)
