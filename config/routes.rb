@@ -55,6 +55,10 @@ Rails.application.routes.draw do
         resources :placeholders, only: %i[create update destroy], controller: 'placeholders'
         resources :player_pairs, only: %i[create destroy], controller: 'player_pairs'
 
+        resource :settlement, only: %i[show update], controller: 'settlements' do
+          post :publish
+        end
+
         resources :matches, only: %i[index create update destroy], controller: 'matches' do
           collection do
             delete :pending, action: :destroy_pending

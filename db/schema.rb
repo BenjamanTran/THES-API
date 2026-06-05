@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_04_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_05_120000) do
   create_table "game_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.boolean "arrived_at_court", default: false, null: false
     t.datetime "created_at", null: false
@@ -48,6 +48,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_160000) do
     t.index ["game_id"], name: "index_game_player_pairs_on_game_id"
     t.index ["user_a_id"], name: "fk_rails_bece239702"
     t.index ["user_b_id"], name: "fk_rails_e3968ff0b3"
+  end
+
+  create_table "game_settlements", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.json "expense_lines", null: false
+    t.integer "fixed_female_price", default: 0, null: false
+    t.integer "fixed_male_price", default: 0, null: false
+    t.bigint "game_id", null: false
+    t.integer "gender_adjustment_steps", default: 0, null: false
+    t.integer "mode", default: 0, null: false
+    t.datetime "published_at"
+    t.integer "status", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.bigint "updated_by_id"
+    t.index ["game_id"], name: "index_game_settlements_on_game_id", unique: true
+    t.index ["updated_by_id"], name: "index_game_settlements_on_updated_by_id"
   end
 
   create_table "games", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -194,6 +210,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_160000) do
   add_foreign_key "game_player_pairs", "users", column: "created_by_id"
   add_foreign_key "game_player_pairs", "users", column: "user_a_id"
   add_foreign_key "game_player_pairs", "users", column: "user_b_id"
+  add_foreign_key "game_settlements", "games"
+  add_foreign_key "game_settlements", "users", column: "updated_by_id"
   add_foreign_key "games", "users", column: "host_id"
   add_foreign_key "games", "venues"
   add_foreign_key "match_participations", "matches"

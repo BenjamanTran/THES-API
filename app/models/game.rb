@@ -7,6 +7,7 @@ class Game < ApplicationRecord
   has_many :users, through: :game_participations
   has_many :game_player_pairs, dependent: :destroy
   has_many :matches, dependent: :destroy
+  has_one :game_settlement, dependent: :destroy
   belongs_to :host, class_name: 'User', optional: true
   belongs_to :venue, optional: true
 
@@ -110,6 +111,12 @@ class Game < ApplicationRecord
     return true if host_id == user.id
 
     game_participations.co_host.exists?(user_id: user.id)
+  end
+
+  def participant?(user)
+    return false unless user
+
+    host_id == user.id || game_participations.exists?(user_id: user.id)
   end
 
   def within_play_time?(at: Time.current)
