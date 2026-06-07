@@ -25,16 +25,23 @@ class GameSettlement < ApplicationRecord
         label: line[:label].to_s,
         quantity: qty.to_i,
         unit_vnd: unit.to_i,
-        amount: line[:amount].to_i
+        amount: line[:amount].to_i,
+        included: line_included?(line)
       }
     end
   end
 
   def total_expense
-    expense_lines_array.sum { |l| l[:amount] }
+    expense_lines_array.sum { |l| l[:included] ? l[:amount] : 0 }
   end
 
   private
+
+  def line_included?(line)
+    val = line[:included]
+    val = line['included'] if val.nil?
+    val != false && val != 'false' && val != 0
+  end
 
   def expense_lines_shape
     return errors.add(:expense_lines, 'must be an array') unless expense_lines.is_a?(Array)

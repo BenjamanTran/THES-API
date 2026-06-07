@@ -171,6 +171,7 @@ module Api
         end
 
         gp.user.update!(gender: gender)
+        broadcast_game_refresh
         render json: player_payload(gp.reload)
       rescue ActiveRecord::RecordInvalid => e
         render json: { error: e.record.errors.full_messages.join(', ') }, status: :unprocessable_content
@@ -336,7 +337,7 @@ module Api
         priority = live_matches.find(&:priority?)
         detail[:priority_match] = priority ? match_summary(priority) : nil
         detail[:pair_matches_limit] = game.pair_matches_limit
-        detail[:player_pairs] = game.game_player_pairs.active_pairs.map { |p| player_pair_payload(p) }
+        detail[:player_pairs] = game.game_player_pairs.select(&:active?).map { |p| player_pair_payload(p) }
         detail
       end
 

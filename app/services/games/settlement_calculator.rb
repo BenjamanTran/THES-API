@@ -13,17 +13,17 @@ module Games
     end
 
     def call
-      arrived = arrived_players
-      gendered = arrived.select { |p| %w[male female].include?(p[:gender]) }
+      participants = settlement_players
+      gendered = participants.select { |p| %w[male female].include?(p[:gender]) }
       males = gendered.select { |p| p[:gender] == 'male' }
       females = gendered.select { |p| p[:gender] == 'female' }
-      ungendered = arrived.reject { |p| %w[male female].include?(p[:gender]) }
+      ungendered = participants.reject { |p| %w[male female].include?(p[:gender]) }
 
       total_expense = @settlement.total_expense
 
       base = {
         total_expense: total_expense,
-        arrived_count: arrived.size,
+        arrived_count: participants.size,
         male_count: males.size,
         female_count: females.size,
         ungendered_players: ungendered.map { |p| { id: p[:id], name: p[:name] } },
@@ -31,7 +31,7 @@ module Games
       }
 
       if @settlement.split_evenly?
-        base.merge(split_evenly_result(total_expense, males, females, gendered, arrived, ungendered))
+        base.merge(split_evenly_result(total_expense, males, females, gendered, participants, ungendered))
       else
         base.merge(fixed_price_result(total_expense, males, females))
       end
@@ -39,11 +39,8 @@ module Games
 
     private
 
-    def arrived_players
-      @game.game_participations
-           .includes(:user)
-           .select(&:arrived_at_court)
-           .map do |gp|
+    def settlement_players
+      @game.game_participations.includes(:user).map do |gp|
         user = gp.user
         {
           id: user.id,
@@ -54,15 +51,15 @@ module Games
       end
     end
 
-    def split_evenly_result(total_expense, males, females, gendered, arrived, ungendered)
-      return empty_split('Chưa có người đã đến sân') if arrived.empty?
+    def split_evenly_result(total_expense, males, females, gendered, participants, ungendered)
+      return empty_split('Chưa có người tham gia') if participants.empty?
       return empty_split('Tổng chi phải lớn hơn 0') if total_expense <= 0
 
       steps = @settlement.gender_adjustment_steps
       nm = males.size
       nf = females.size
 
-      pool = gendered.presence || arrived
+      pool = gendered.presence || participants
 
       male_display_unit = nil
       female_display_unit = nil
@@ -81,7 +78,7 @@ module Games
         female_display_unit = female_unit
         per_player = assign_gender_shares(pool, male_unit, female_unit)
       else
-        unit = ceil_share_amount(total_expense.to_f / n)
+        unit = ceil_share_amount(total_expense.to_f / pool.size)
         per_player = pool.map do |p|
           PlayerRow.new(id: p[:id], name: p[:name], gender: p[:gender], amount: unit)
         end
@@ -96,7 +93,7 @@ module Games
         male_unit: male_display_unit,
         female_unit: female_display_unit,
         per_player: per_player.map(&:to_h),
-        warnings: ungendered.any? ? ['Một số người đến chưa có giới tính — không tính vào chia tiền'] : []
+        warnings: ungendered.any? ? ['Một số người chưa có giới tính — không tính vào chia tiền'] : []
       }
     end
 
@@ -122,7 +119,7 @@ module Games
       profit = revenue - total_expense
 
       warnings = []
-      warnings << 'Chưa có người đã đến có giới tính' if nm.zero? && nf.zero?
+      warnings << 'Chưa có người có giới tính' if nm.zero? && nf.zero?
 
       {
         mode: 'fixed_price',

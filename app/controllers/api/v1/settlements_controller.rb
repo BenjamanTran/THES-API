@@ -18,11 +18,11 @@ module Api
         end
 
         computed = Games::SettlementCalculator.new(game: @game, settlement: settlement).call
-        render json: settlement_payload(settlement, computed: computed, editable: manager? && settlement.draft?)
+        render json: settlement_payload(settlement, computed: computed, editable: manager?)
       end
 
       def update
-        result = Games::UpsertSettlementService.call(
+        result = Games::UpdateSettlementService.call(
           user: @current_user,
           game: @game,
           params: settlement_params
@@ -31,7 +31,7 @@ module Api
           render json: settlement_payload(
             result.data[:settlement],
             computed: result.data[:computed],
-            editable: true
+            editable: manager?
           )
         else
           render json: { error: result.error }, status: result.status
@@ -44,7 +44,7 @@ module Api
           render json: settlement_payload(
             result.data[:settlement],
             computed: result.data[:computed],
-            editable: false
+            editable: manager?
           )
         else
           render json: { error: result.error }, status: result.status
@@ -54,7 +54,7 @@ module Api
       private
 
       def set_game
-        @game = Game.includes(game_participations: :user).find(params[:game_id])
+        @game = Game.find(params[:game_id])
       rescue ActiveRecord::RecordNotFound
         render json: { error: 'Game not found' }, status: :not_found
       end
@@ -81,7 +81,7 @@ module Api
           :gender_adjustment_steps,
           :fixed_male_price,
           :fixed_female_price,
-          expense_lines: %i[id label amount quantity unit_vnd shuttle_count shuttle_unit_vnd]
+          expense_lines: %i[id label amount quantity unit_vnd shuttle_count shuttle_unit_vnd included]
         ).to_h.symbolize_keys
       end
 
