@@ -20,15 +20,41 @@ class GameSettlement < ApplicationRecord
       line = line.deep_symbolize_keys if line.respond_to?(:deep_symbolize_keys)
       qty = line[:quantity].presence || line[:shuttle_count]
       unit = line[:unit_vnd].presence || line[:shuttle_unit_vnd]
-      {
+      kind = line[:kind].to_s
+      shuttle = kind == 'shuttle' || line[:label].to_s.match?(/\Acầu/i)
+      base = {
         id: line[:id].to_s,
         label: line[:label].to_s,
         quantity: qty.to_i,
         unit_vnd: unit.to_i,
         amount: line[:amount].to_i,
-        included: line_included?(line)
+        included: line_included?(line),
+        kind: shuttle ? 'shuttle' : 'generic'
       }
+      if shuttle
+        base.merge(
+          shuttle_tube_vnd: (line[:shuttle_tube_vnd].presence || 325_000).to_i,
+          shuttle_per_tube: [(line[:shuttle_per_tube].presence || 12).to_i, 1].max
+        )
+      else
+        base
+      end
     end
+  end
+
+  def shuttle_settings_hash
+    shuttle = Array(expense_lines).find do |line|
+      line = line.deep_symbolize_keys if line.respond_to?(:deep_symbolize_keys)
+      line[:kind].to_s == 'shuttle' || line[:label].to_s.match?(/\Acầu/i)
+    end
+    return nil if shuttle.blank?
+
+    shuttle = shuttle.deep_symbolize_keys if shuttle.respond_to?(:deep_symbolize_keys)
+    {
+      name: shuttle[:label].to_s.presence || 'Cầu 88',
+      tube_vnd: (shuttle[:shuttle_tube_vnd].presence || 325_000).to_i,
+      per_tube: [(shuttle[:shuttle_per_tube].presence || 12).to_i, 1].max
+    }
   end
 
   def total_expense

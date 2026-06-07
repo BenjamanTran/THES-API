@@ -81,7 +81,11 @@ module Api
           :gender_adjustment_steps,
           :fixed_male_price,
           :fixed_female_price,
-          expense_lines: %i[id label amount quantity unit_vnd shuttle_count shuttle_unit_vnd included]
+          shuttle_settings: %i[name tube_vnd per_tube],
+          expense_lines: %i[
+            id label kind amount quantity unit_vnd
+            shuttle_count shuttle_unit_vnd shuttle_tube_vnd shuttle_per_tube included
+          ]
         ).to_h.symbolize_keys
       end
 
@@ -98,6 +102,7 @@ module Api
             mode: settlement.mode,
             status: settlement.status,
             expense_lines: settlement.expense_lines_array,
+            shuttle_settings: settlement.shuttle_settings_hash,
             gender_adjustment_steps: settlement.gender_adjustment_steps,
             fixed_male_price: settlement.fixed_male_price,
             fixed_female_price: settlement.fixed_female_price,
