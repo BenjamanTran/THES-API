@@ -17,11 +17,9 @@ module Games
       settlement = @game.game_settlement || @game.build_game_settlement
       was_published = settlement.published?
 
-      global_shuttle = normalize_shuttle_settings(@params[:shuttle_settings])
-
       settlement.assign_attributes(
         mode: @params[:mode],
-        expense_lines: normalize_expense_lines(@params[:expense_lines], global_shuttle),
+        expense_lines: normalize_expense_lines(@params[:expense_lines]),
         gender_adjustment_steps: @params[:gender_adjustment_steps].to_i,
         fixed_male_price: @params[:fixed_male_price].to_i,
         fixed_female_price: @params[:fixed_female_price].to_i,
@@ -52,7 +50,7 @@ module Games
       Games::CableBroadcaster.broadcast(game: game, event: 'game.refresh')
     end
 
-    def normalize_expense_lines(lines, global_shuttle = nil)
+    def normalize_expense_lines(lines)
       Array(lines).map do |line|
         line = line.to_unsafe_h if line.respond_to?(:to_unsafe_h)
         line = line.deep_symbolize_keys if line.respond_to?(:deep_symbolize_keys)
@@ -61,13 +59,13 @@ module Games
         shuttle = kind == 'shuttle' || line[:label].to_s.match?(/\Acầu/i)
 
         if shuttle
-          tube = (global_shuttle&.dig('tube_vnd') || line[:shuttle_tube_vnd].presence || 325_000).to_i
-          per = [(global_shuttle&.dig('per_tube') || line[:shuttle_per_tube].presence || 12).to_i, 1].max
+          tube = (line[:shuttle_tube_vnd].presence || 325_000).to_i
+          per = [(line[:shuttle_per_tube].presence || 12).to_i, 1].max
           amount = per.positive? ? ((qty * tube) / per.to_f).round : 0
           unit = per.positive? ? (tube.to_f / per).round : 0
           {
             'id' => (line[:id].presence || SecureRandom.uuid),
-            'label' => (global_shuttle&.dig('name') || line[:label].to_s.strip).presence || 'Cầu 88',
+            'label' => line[:label].to_s.strip.presence || 'Cầu 88',
             'kind' => 'shuttle',
             'quantity' => qty,
             'shuttle_tube_vnd' => tube,
