@@ -28,7 +28,17 @@ module Games
         rank_result = apply_rank!(placeholder, required: true)
         return rank_result if rank_result.is_a?(ServiceResult)
 
-        @game.game_participations.create!(user: placeholder, team: assign_team, role: :player)
+        tier_key = normalize_tier(@params[:tier].presence || 'newbie')
+        stars = normalized_stars(@params[:stars].presence || 3)
+        host_tier = GameParticipation::HOST_TIER_MAP[tier_key.to_s]
+
+        @game.game_participations.create!(
+          user: placeholder,
+          team: assign_team,
+          role: :player,
+          host_rated_tier: host_tier,
+          host_rated_stars: stars
+        )
         @game.update!(players_count: @game.players_count + 1)
         @game.update!(status: :full) if @game.open? && @game.players_count >= @game.max_players
 
@@ -50,6 +60,12 @@ module Games
         if tier_params_present?
           rank_result = apply_rank!(placeholder)
           return rank_result if rank_result.is_a?(ServiceResult)
+
+          gp = @game.game_participations.find_by!(user: placeholder)
+          tier_key = normalize_tier(@params[:tier].presence || gp.host_rated_tier_key || 'newbie')
+          stars = normalized_stars(@params[:stars].presence || gp.host_rated_stars || 3)
+          host_tier = GameParticipation::HOST_TIER_MAP[tier_key.to_s]
+          gp.update!(host_rated_tier: host_tier, host_rated_stars: stars)
         end
       end
 
@@ -123,6 +139,10 @@ module Games
       return key.to_sym if key && Rank.tiers.key?(key)
 
       nil
+    end
+
+    def normalized_stars(raw)
+      [[raw.to_i, 1].max, 5].min
     end
 
     def assign_team

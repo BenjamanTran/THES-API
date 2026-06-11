@@ -6,7 +6,7 @@ module Api
       skip_before_action :set_current_user, only: %i[index show search]
       before_action :set_current_user_optional, only: %i[index show search]
       before_action :set_game,
-                    only: %i[update join leave promote kick rate_player update_player adjust_session_played toggle_arrived]
+                    only: %i[update join leave promote kick rate_player update_player adjust_session_played toggle_arrived transition]
       before_action :set_game_with_pairs, only: %i[show]
 
       MAX_PER_PAGE = 50
@@ -212,6 +212,21 @@ module Api
         end
       end
 
+      def transition
+        unless @game.host_or_co_host?(@current_user)
+          return render json: { error: 'Forbidden' }, status: :forbidden
+        end
+
+        target = params[:status].to_s
+        unless Game.statuses.key?(target)
+          return render json: { error: 'Invalid status' }, status: :unprocessable_content
+        end
+
+        @game.update!(status: target)
+        broadcast_game_refresh
+        render json: game_detail(@game.reload)
+      end
+
       private
 
       def broadcast_game_refresh
@@ -329,13 +344,14 @@ module Api
         detail[:players] = game.game_participations.map { |gp| player_payload(gp) }
         detail[:fit_level] = game.fit_level(@current_user) if @current_user
         detail[:match_counts] = match_counts_for_game(game)
+        participations_by_user = game.game_participations.index_by(&:user_id)
         live_matches = game.matches
                            .where(status: %i[ongoing pending])
                            .includes(match_participations: { user: :rank })
                            .order(status: :desc, match_number: :asc)
-        detail[:matches] = live_matches.map { |m| match_summary(m) }
+        detail[:matches] = live_matches.map { |m| match_summary(m, participations_by_user) }
         priority = live_matches.find(&:priority?)
-        detail[:priority_match] = priority ? match_summary(priority) : nil
+        detail[:priority_match] = priority ? match_summary(priority, participations_by_user) : nil
         detail[:pair_matches_limit] = game.pair_matches_limit
         detail[:player_pairs] = game.game_player_pairs.select(&:active?).map { |p| player_pair_payload(p) }
         detail
@@ -360,7 +376,7 @@ module Api
         }
       end
 
-      def match_summary(match)
+      def match_summary(match, participations_by_user = nil)
         {
           id: match.id,
           match_number: match.match_number,
@@ -370,15 +386,16 @@ module Api
           winner_team: match.winner_team,
           priority: match.priority,
           court_number: match.court_number,
-          team_a: match.match_participations.select(&:team_a?).map { |mp| match_player(mp) },
-          team_b: match.match_participations.select(&:team_b?).map { |mp| match_player(mp) }
+          team_a: match.match_participations.select(&:team_a?).map { |mp| match_player(mp, participations_by_user) },
+          team_b: match.match_participations.select(&:team_b?).map { |mp| match_player(mp, participations_by_user) }
         }
       end
 
-      def match_player(mp)
+      def match_player(mp, participations_by_user = nil)
         user = mp.user
+        gp = participations_by_user&.fetch(user.id, nil)
         entry = { id: user.id, name: user.name, gender: user.gender }.merge(player_avatar_fields(user))
-        entry[:rank] = game_player_rank_stored(user) if user.rank
+        merge_session_skill!(entry, gp) if gp
         entry
       end
 
@@ -392,15 +409,8 @@ module Api
           placeholder: user.placeholder?,
           arrived_at_court: participation.arrived_at_court
         }.merge(player_avatar_fields(user))
-        if user.rank
-          payload[:rank] = game_player_rank_stored(user)
-          payload[:declared_rank] = declared_rank_payload(user.rank) unless user.placeholder?
-        end
-        if participation.host_rated_tier.present?
-          payload[:host_rated_tier] = participation.host_rated_tier_key
-          payload[:host_rated_stars] = participation.host_rated_stars
-          payload[:host_rating_note] = participation.host_rating_note
-        end
+        payload[:declared_rank] = declared_rank_payload(user.rank) if user.rank && !user.placeholder?
+        merge_session_skill!(payload, participation)
         payload[:session_matches] = {
           played: participation.session_played_count,
           wins: 0,

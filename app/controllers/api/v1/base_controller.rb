@@ -202,6 +202,38 @@ module Api
           )
         end
       end
+
+      # In-game skill display/balance: host session rating only (not global rank).
+      def host_rated_fields(participation)
+        return {} unless participation&.host_rated_tier.present? && participation.host_rated_stars.present?
+
+        fields = {
+          host_rated_tier: participation.host_rated_tier_key,
+          host_rated_stars: participation.host_rated_stars
+        }
+        fields[:host_rating_note] = participation.host_rating_note if participation.host_rating_note.present?
+        fields
+      end
+
+      def session_skill_rank_from_participation(participation)
+        return unless participation&.host_rated_tier.present? && participation.host_rated_stars.present?
+
+        tier_key = participation.host_rated_tier_key
+        rating_val = Rank.rating_from_tier_and_stars(tier_key.to_sym, participation.host_rated_stars)
+        {
+          tier: tier_key,
+          rating: rating_val,
+          display_name: I18n.t("ranks.#{tier_key}"),
+          division: nil
+        }
+      end
+
+      def merge_session_skill!(payload, participation)
+        payload.merge!(host_rated_fields(participation))
+        rank = session_skill_rank_from_participation(participation)
+        payload[:rank] = rank if rank
+        payload
+      end
     end
   end
 end

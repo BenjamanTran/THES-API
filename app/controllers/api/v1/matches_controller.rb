@@ -51,8 +51,8 @@ module Api
         unless @match.pending?
           return render json: { error: 'Match already started' }, status: :unprocessable_content
         end
-        unless @game.within_play_time?
-          return render json: { error: 'Chưa tới giờ trận, không thể bắt đầu' }, status: :unprocessable_content
+        unless @game.ongoing?
+          return render json: { error: 'Game chưa bắt đầu' }, status: :unprocessable_content
         end
 
         roster_error = Matches::RosterValidator.error_for_start(@game, @match)
@@ -185,6 +185,7 @@ module Api
 
       def match_payload(match)
         mp = match.match_participations.loaded? ? match.match_participations : match.match_participations.includes(user: :rank)
+        participations_by_user = @game.game_participations.index_by(&:user_id)
         team_a = mp.select(&:team_a?)
         team_b = mp.select(&:team_b?)
         {
@@ -198,16 +199,17 @@ module Api
           finished_at: match.finished_at,
           priority: match.priority,
           court_number: match.court_number,
-          team_a: team_a.map { |mp_entry| player_entry(mp_entry) },
-          team_b: team_b.map { |mp_entry| player_entry(mp_entry) }
+          team_a: team_a.map { |mp_entry| player_entry(mp_entry, participations_by_user) },
+          team_b: team_b.map { |mp_entry| player_entry(mp_entry, participations_by_user) }
         }
       end
 
-      def player_entry(mp_entry)
+      def player_entry(mp_entry, participations_by_user)
         user = mp_entry.user
+        gp = participations_by_user[mp_entry.user_id]
         entry = { id: user.id, name: user.name, gender: user.gender, winner: mp_entry.winner }
                 .merge(player_avatar_fields(user))
-        entry[:rank] = game_player_rank_payload(user) if user.rank
+        merge_session_skill!(entry, gp) if gp
         entry
       end
     end

@@ -50,6 +50,7 @@ Rails.application.routes.draw do
           patch :update_player
           patch 'players/:user_id/session_played', action: :adjust_session_played
           patch 'players/:user_id/arrived', action: :toggle_arrived
+          post :transition
         end
 
         resources :placeholders, only: %i[create update destroy], controller: 'placeholders'

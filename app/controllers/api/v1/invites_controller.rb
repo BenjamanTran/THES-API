@@ -147,11 +147,8 @@ module Api
           },
           arrived_at_court: participation.arrived_at_court
         }.merge(player_avatar_fields(user))
-        payload[:rank] = game_player_rank_stored(user) if user.rank
-        if participation.host_rated_tier.present?
-          payload[:host_rated_tier] = participation.host_rated_tier_key
-          payload[:host_rated_stars] = participation.host_rated_stars
-        end
+        payload[:declared_rank] = declared_rank_payload(user.rank) if user.rank
+        merge_session_skill!(payload, participation)
         payload
       end
 

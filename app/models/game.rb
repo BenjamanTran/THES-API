@@ -68,7 +68,6 @@ class Game < ApplicationRecord
     ongoing_game = statuses[:ongoing]
     ongoing_match = Match.statuses[:ongoing]
     where.not(status: %i[finished cancelled])
-         .where(end_time: Time.current..)
          .where(
            <<~SQL.squish,
              games.status = :ongoing_game OR EXISTS (
