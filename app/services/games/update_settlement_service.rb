@@ -18,11 +18,7 @@ module Games
       was_published = settlement.published?
 
       settlement.assign_attributes(
-        mode: @params[:mode],
-        expense_lines: normalize_expense_lines(@params[:expense_lines]),
-        gender_adjustment_steps: @params[:gender_adjustment_steps].to_i,
-        fixed_male_price: @params[:fixed_male_price].to_i,
-        fixed_female_price: @params[:fixed_female_price].to_i,
+        sections: normalize_sections(@params[:sections]),
         updated_by: @user
       )
       settlement.status = :draft if settlement.new_record?
@@ -50,6 +46,24 @@ module Games
       Games::CableBroadcaster.broadcast(game: game, event: 'game.refresh')
     end
 
+    def normalize_sections(raw_sections)
+      Array(raw_sections).map do |sec|
+        sec = sec.to_unsafe_h if sec.respond_to?(:to_unsafe_h)
+        sec = sec.deep_symbolize_keys if sec.respond_to?(:deep_symbolize_keys)
+        mode = %w[split_evenly fixed_price].include?(sec[:mode].to_s) ? sec[:mode].to_s : 'split_evenly'
+        {
+          'id' => sec[:id].to_s.presence || SecureRandom.uuid,
+          'label' => sec[:label].to_s.strip.presence || 'Phần 1',
+          'mode' => mode,
+          'expense_lines' => normalize_expense_lines(sec[:expense_lines]),
+          'desired_female_price' => sec[:desired_female_price].to_i,
+          'fixed_male_price' => sec[:fixed_male_price].to_i,
+          'fixed_female_price' => sec[:fixed_female_price].to_i,
+          'participant_ids' => Array(sec[:participant_ids]).map(&:to_i).uniq
+        }
+      end
+    end
+
     def normalize_expense_lines(lines)
       Array(lines).map do |line|
         line = line.to_unsafe_h if line.respond_to?(:to_unsafe_h)
@@ -64,7 +78,7 @@ module Games
           amount = per.positive? ? ((qty * tube) / per.to_f).round : 0
           unit = per.positive? ? (tube.to_f / per).round : 0
           {
-            'id' => (line[:id].presence || SecureRandom.uuid),
+            'id' => line[:id].presence || SecureRandom.uuid,
             'label' => line[:label].to_s.strip.presence || 'Cầu 88',
             'kind' => 'shuttle',
             'quantity' => qty,
@@ -72,26 +86,26 @@ module Games
             'shuttle_per_tube' => per,
             'unit_vnd' => unit,
             'amount' => amount,
-            'included' => line[:included].nil? ? true : ActiveModel::Type::Boolean.new.cast(line[:included])
+            'included' => line[:included].nil? || ActiveModel::Type::Boolean.new.cast(line[:included])
           }
         else
           unit = (line[:unit_vnd].presence || line[:shuttle_unit_vnd]).to_i
           amount = qty.positive? && unit.positive? ? qty * unit : line[:amount].to_i
           {
-            'id' => (line[:id].presence || SecureRandom.uuid),
+            'id' => line[:id].presence || SecureRandom.uuid,
             'label' => line[:label].to_s.strip,
             'kind' => 'generic',
             'quantity' => qty,
             'unit_vnd' => unit,
             'amount' => amount,
-            'included' => line[:included].nil? ? true : ActiveModel::Type::Boolean.new.cast(line[:included])
+            'included' => line[:included].nil? || ActiveModel::Type::Boolean.new.cast(line[:included])
           }
         end
       end.reject { |l| l['label'].blank? && l['amount'].zero? }
     end
 
     def normalize_shuttle_settings(raw)
-      return nil if raw.blank?
+      return if raw.blank?
 
       raw = raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
       raw = raw.deep_symbolize_keys if raw.respond_to?(:deep_symbolize_keys)

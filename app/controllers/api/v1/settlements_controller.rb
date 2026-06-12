@@ -77,14 +77,16 @@ module Api
 
       def settlement_params
         params.permit(
-          :mode,
-          :gender_adjustment_steps,
-          :fixed_male_price,
-          :fixed_female_price,
-          shuttle_settings: %i[name tube_vnd per_tube],
-          expense_lines: %i[
-            id label kind amount quantity unit_vnd
-            shuttle_count shuttle_unit_vnd shuttle_tube_vnd shuttle_per_tube included
+          sections: [
+            :id, :label, :mode,
+            :desired_female_price, :fixed_male_price, :fixed_female_price,
+            { participant_ids: [] },
+            {
+              expense_lines: %i[
+                id label kind amount quantity unit_vnd
+                shuttle_count shuttle_unit_vnd shuttle_tube_vnd shuttle_per_tube included
+              ]
+            }
           ]
         ).to_h.symbolize_keys
       end
@@ -99,13 +101,8 @@ module Api
         if settlement
           body[:status] = settlement.status
           body[:settlement] = {
-            mode: settlement.mode,
             status: settlement.status,
-            expense_lines: settlement.expense_lines_array,
-            shuttle_settings: settlement.shuttle_settings_hash,
-            gender_adjustment_steps: settlement.gender_adjustment_steps,
-            fixed_male_price: settlement.fixed_male_price,
-            fixed_female_price: settlement.fixed_female_price,
+            sections: settlement.sections_array,
             published_at: settlement.published_at&.iso8601,
             updated_at: settlement.updated_at.iso8601
           }

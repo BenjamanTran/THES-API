@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_05_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_11_110000) do
   create_table "game_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.boolean "arrived_at_court", default: false, null: false
     t.datetime "created_at", null: false
@@ -52,13 +52,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_120000) do
 
   create_table "game_settlements", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.json "expense_lines", null: false
-    t.integer "fixed_female_price", default: 0, null: false
-    t.integer "fixed_male_price", default: 0, null: false
     t.bigint "game_id", null: false
-    t.integer "gender_adjustment_steps", default: 0, null: false
-    t.integer "mode", default: 0, null: false
     t.datetime "published_at"
+    t.json "sections"
     t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
     t.bigint "updated_by_id"
