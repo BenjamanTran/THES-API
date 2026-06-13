@@ -263,7 +263,7 @@ module Api
       end
 
       def update_params
-        params.permit(:max_players, :pair_matches_limit, courts: []).to_h
+        params.permit(:start_time, :end_time, :max_players, :pair_matches_limit, courts: []).to_h
       end
 
       def search_params
@@ -341,7 +341,8 @@ module Api
                             :description, :title, :min_tier, :max_tier, :courts,
                             :min_price, :max_price, :invite_code)
         detail[:host] = { id: game.host&.id, name: game.host&.name }
-        detail[:players] = game.game_participations.map { |gp| player_payload(gp) }
+        session_stats = session_stats_by_user(game)
+        detail[:players] = game.game_participations.map { |gp| player_payload(gp, session_stats[gp.user_id]) }
         detail[:fit_level] = game.fit_level(@current_user) if @current_user
         detail[:match_counts] = match_counts_for_game(game)
         participations_by_user = game.game_participations.index_by(&:user_id)
@@ -399,7 +400,28 @@ module Api
         entry
       end
 
-      def player_payload(participation)
+      def session_stats_by_user(game)
+        stats = Hash.new { |h, k| h[k] = { played: 0, wins: 0, losses: 0 } }
+        statuses = Match.statuses.values_at('finished', 'ongoing')
+        MatchParticipation
+          .joins(:match)
+          .includes(:match)
+          .where(matches: { game_id: game.id, status: statuses })
+          .find_each do |mp|
+            row = stats[mp.user_id]
+            row[:played] += 1
+            next unless mp.match.finished? && mp.match.winner_team.present?
+
+            if mp.winner?
+              row[:wins] += 1
+            else
+              row[:losses] += 1
+            end
+          end
+        stats
+      end
+
+      def player_payload(participation, session_stats = nil)
         user = participation.user
         payload = {
           id: user.id,
@@ -411,11 +433,7 @@ module Api
         }.merge(player_avatar_fields(user))
         payload[:declared_rank] = declared_rank_payload(user.rank) if user.rank && !user.placeholder?
         merge_session_skill!(payload, participation)
-        payload[:session_matches] = {
-          played: participation.session_played_count,
-          wins: 0,
-          losses: 0
-        }
+        payload[:session_matches] = session_stats || { played: participation.session_played_count, wins: 0, losses: 0 }
         payload
       end
     end

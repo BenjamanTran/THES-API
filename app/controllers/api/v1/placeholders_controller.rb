@@ -79,6 +79,9 @@ module Api
           arrived_at_court: participation.arrived_at_court
         }
         payload[:rank] = game_player_rank_payload(user) if user.rank
+        payload[:declared_rank] = declared_rank_payload(user.rank) if user.rank
+        merge_session_skill!(payload, participation)
+        payload[:session_matches] = { played: participation.session_played_count, wins: 0, losses: 0 }
         payload
       end
     end

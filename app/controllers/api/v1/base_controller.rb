@@ -144,10 +144,10 @@ module Api
       def declared_rank_payload(rank)
         return unless rank
 
-        tier_key = declared_tier_key(rank)
+        tier_key = declared_tier_key(rank) || rank.tier
         return unless tier_key
 
-        rating_val = rank.declared_rating.presence || Rank.rating_from_tier_and_stars(tier_key, 3)
+        rating_val = rank.declared_rating.presence || rank.rating.presence || Rank.rating_from_tier_and_stars(tier_key, 3)
 
         {
           tier: tier_key.to_s,

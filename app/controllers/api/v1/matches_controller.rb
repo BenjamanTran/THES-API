@@ -38,6 +38,7 @@ module Api
         )
         if result.success?
           broadcast_match_event('match.updated', result.data[:match])
+          Array(result.data[:deleted_match_ids]).each { |match_id| broadcast_match_deleted(match_id) }
           render json: match_payload(result.data[:match])
         else
           render json: { error: result.error }, status: result.status

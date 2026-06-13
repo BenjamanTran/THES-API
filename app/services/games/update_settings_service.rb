@@ -39,6 +39,9 @@ module Games
     def build_attrs
       attrs = {}
 
+      attrs[:start_time] = @params[:start_time] if @params.key?(:start_time)
+      attrs[:end_time] = @params[:end_time] if @params.key?(:end_time)
+
       if @params.key?(:max_players)
         value = @params[:max_players].to_i
         return failure('max_players must be at least 2') if value < 2
