@@ -10,12 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_11_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_19_090000) do
   create_table "game_participations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.boolean "arrived_at_court", default: false, null: false
     t.datetime "created_at", null: false
     t.bigint "game_id", null: false
-    t.integer "host_rated_stars"
+    t.decimal "host_rated_stars", precision: 3, scale: 2
     t.integer "host_rated_tier"
     t.string "host_rating_note", limit: 200
     t.boolean "play_time_credited", default: false, null: false
@@ -147,6 +147,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_11_110000) do
     t.index ["user_id"], name: "index_ranks_on_user_id", unique: true
   end
 
+  create_table "user_skill_snapshots", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.integer "agility", default: 5, null: false
+    t.integer "attack", null: false
+    t.decimal "computed_stars", precision: 3, scale: 2, default: "1.0", null: false
+    t.datetime "created_at", null: false
+    t.integer "declared_rating", default: 0, null: false
+    t.integer "declared_tier", default: 0, null: false
+    t.integer "defense", default: 5, null: false
+    t.integer "footwork", default: 5, null: false
+    t.date "month", null: false
+    t.decimal "overall_score", precision: 3, scale: 1, null: false
+    t.integer "stamina", default: 5, null: false
+    t.integer "technique", default: 5, null: false, comment: "Self-assessed technique score from 1 to 10"
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["user_id", "month"], name: "index_user_skill_snapshots_on_user_id_and_month", unique: true
+    t.index ["user_id"], name: "index_user_skill_snapshots_on_user_id"
+  end
+
   create_table "user_skills", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "level", default: 1, null: false
@@ -214,6 +233,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_11_110000) do
   add_foreign_key "match_participations", "users"
   add_foreign_key "matches", "games"
   add_foreign_key "ranks", "users"
+  add_foreign_key "user_skill_snapshots", "users"
   add_foreign_key "user_skills", "users"
   add_foreign_key "venues", "users", column: "created_by_id"
 end

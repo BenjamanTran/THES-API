@@ -209,7 +209,7 @@ module Api
 
         fields = {
           host_rated_tier: participation.host_rated_tier_key,
-          host_rated_stars: participation.host_rated_stars
+          host_rated_stars: participation.host_rated_stars.to_f
         }
         fields[:host_rating_note] = participation.host_rating_note if participation.host_rating_note.present?
         fields

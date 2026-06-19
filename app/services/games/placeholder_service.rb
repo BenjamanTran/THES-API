@@ -29,7 +29,7 @@ module Games
         return rank_result if rank_result.is_a?(ServiceResult)
 
         tier_key = normalize_tier(@params[:tier].presence || 'newbie')
-        stars = normalized_stars(@params[:stars].presence || 3)
+        stars = normalized_stars(@params[:stars].presence || 2.5)
         host_tier = GameParticipation::HOST_TIER_MAP[tier_key.to_s]
 
         @game.game_participations.create!(
@@ -63,7 +63,7 @@ module Games
 
           gp = @game.game_participations.find_by!(user: placeholder)
           tier_key = normalize_tier(@params[:tier].presence || gp.host_rated_tier_key || 'newbie')
-          stars = normalized_stars(@params[:stars].presence || gp.host_rated_stars || 3)
+          stars = normalized_stars(@params[:stars].presence || gp.host_rated_stars || 2.5)
           host_tier = GameParticipation::HOST_TIER_MAP[tier_key.to_s]
           gp.update!(host_rated_tier: host_tier, host_rated_stars: stars)
         end
@@ -120,7 +120,7 @@ module Games
       tier_key = normalize_tier(@params[:tier].presence || 'newbie')
       return failure('Invalid tier') unless tier_key
 
-      stars = @params[:stars].presence || 3
+      stars = @params[:stars].presence || 2.5
       rating = Rank.rating_from_tier_and_stars(tier_key, stars)
       division = tier_key == :professional ? nil : 3
 
@@ -142,7 +142,7 @@ module Games
     end
 
     def normalized_stars(raw)
-      [[raw.to_i, 1].max, 5].min
+      [[raw.to_f, 0.5].max, 5].min
     end
 
     def assign_team

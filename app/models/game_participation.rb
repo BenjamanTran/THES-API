@@ -15,7 +15,9 @@ class GameParticipation < ApplicationRecord
   validates :team, presence: true
   validates :user_id, uniqueness: { scope: :game_id }
   validates :session_played_count, numericality: { greater_than_or_equal_to: 0, only_integer: true }
-  validates :host_rated_stars, inclusion: { in: 1..5 }, allow_nil: true
+  validates :host_rated_stars,
+            numericality: { greater_than_or_equal_to: 0.5, less_than_or_equal_to: 5 },
+            allow_nil: true
   validates :host_rating_note, length: { maximum: 200 }, allow_nil: true
   HOST_TIER_MAP = {
     'newbie' => :hr_newbie, 'beginner_plus' => :hr_beginner_plus,

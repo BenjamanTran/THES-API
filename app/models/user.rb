@@ -17,6 +17,7 @@ class User < ApplicationRecord
   has_many :games, through: :game_participations
   has_one :rank, dependent: :destroy
   has_many :user_skills, dependent: :destroy
+  has_many :skill_snapshots, class_name: 'UserSkillSnapshot', dependent: :destroy
 
   before_validation :normalize_email
 

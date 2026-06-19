@@ -39,7 +39,7 @@ module Seeds
 
       participation.update!(
         host_rated_tier: map[tier_key],
-        host_rated_stars: [[stars.to_i, 1].max, 5].min
+        host_rated_stars: [[stars.to_f, 0.5].max, 5].min
       )
     end
 

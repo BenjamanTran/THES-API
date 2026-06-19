@@ -26,6 +26,7 @@ Rails.application.routes.draw do
       get    '/me',              to: 'me#show'
       get    '/experiments',     to: 'experiments#show'
       get    '/me/activity',     to: 'me#activity'
+      patch  '/me/skills',       to: 'skill_profiles#update'
       patch  '/me',      to: 'profile#update'
       put    '/me',      to: 'profile#update'
       post   '/me/avatar', to: 'avatars#create'

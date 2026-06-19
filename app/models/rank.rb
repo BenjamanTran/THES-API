@@ -48,15 +48,15 @@ class Rank < ApplicationRecord
   end
 
   def self.rating_from_tier_and_stars(tier_key, stars)
-    stars = [[stars.to_i, 1].max, 5].min
+    stars = [[stars.to_f, 0.5].max, 5].min
     base = TIER_BASE[tier_key.to_sym] || 0
-    base + ((stars - 1) * STAR_STEP)
+    (base + ((stars - 1) * STAR_STEP)).round
   end
 
   def self.stars_for_rating(tier_key, rating)
     base = TIER_BASE[tier_key.to_sym] || 0
     offset = [rating.to_i - base, 0].max
-    [[(offset / STAR_STEP) + 1, 1].max, 5].min
+    [[((offset.to_f / STAR_STEP) + 1).round(2), 0.5].max, 5].min
   end
 
   private

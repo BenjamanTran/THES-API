@@ -143,7 +143,7 @@ module Api
 
         gp.update!(
           host_rated_tier: tier_key,
-          host_rated_stars: params[:stars].to_i,
+          host_rated_stars: params[:stars].to_f,
           host_rating_note: params[:note].presence
         )
         Users::GlobalRatingCalculator.sync!(user: gp.user)

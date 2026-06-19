@@ -17,7 +17,7 @@ module Users
         achievements: AchievementsList.call(user: @user),
         recent_activity: activity[:recent_activity],
         recent_activity_has_more: activity[:has_more]
-      }
+      }.merge(SkillProfilePayload.call(user: @user))
     end
   end
 end
